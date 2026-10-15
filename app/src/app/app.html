@@ -1,12 +1,14 @@
 <main class="app-shell">
-  <header class="top-bar">
-    <h1>Austerlitz Sim Battle Setup</h1>
-    <button type="button" (click)="turnFile.click()">Load New</button>
-    <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
-    @if (loading) {
-      <span class="muted">Parsing...</span>
-    }
-  </header>
+  <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
+
+  @if (!(parsedTurn && header)) {
+    <div class="load-row">
+      <button type="button" (click)="turnFile.click()">Load New</button>
+      @if (loading) {
+        <span class="muted">Parsing...</span>
+      }
+    </div>
+  }
 
   @if (parseError) {
     <p class="error">{{ parseError }}</p>
@@ -59,7 +61,7 @@
                 [class.between]="!isAnchored(slot)"
                 [style.grid-column]="entrenchmentColumn(slot)"
               >
-                <span class="slot-label">{{ slot }} :</span>
+                <span class="slot-label">{{ slot }} <span class="slot-colon" aria-hidden="true">:</span></span>
                 <span class="sheet-value coord">
                   <input type="number" min="1" max="45" [(ngModel)]="fortressEntrenchments[slot - 1].x" />
                 </span>
@@ -70,15 +72,22 @@
             }
           </div>
         }
+        <div class="load-under-fortress">
+          <button type="button" (click)="turnFile.click()">Load New</button>
+          @if (loading) {
+            <span class="muted">Parsing...</span>
+          }
+        </div>
       </div>
     </section>
   }
 
   @if (rows.length) {
     <section class="map panel">
-      <h2>The Battle field</h2>
-      <p class="map-caption">{{ mapCaption() }}</p>
-      <p class="hover-readout">{{ hoverText || 'Hover a cell to read its coordinate and height.' }}</p>
+      <div class="map-heading">
+        <h2>The Battle field</h2>
+        <p class="map-caption">{{ mapCaption() }}</p>
+      </div>
       <div class="map-grid">
         <div class="axis corner"></div>
         @for (column of columnNumbers; track column) {
@@ -91,7 +100,6 @@
               class="cell"
               [style.background-color]="heightColor(cell.height)"
               [style.box-shadow]="zoneShadow(cell)"
-              (mouseenter)="onCellHover(cell)"
             >
               <span class="glyph" [class.light]="glyphIsLight(cell.height)">{{ cellLabel(cell) }}</span>
             </div>

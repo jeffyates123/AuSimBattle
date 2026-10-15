@@ -36,7 +36,6 @@ export class App {
   protected parseError = '';
   protected exportError = '';
   protected statusMessage = '';
-  protected hoverText = '';
   protected readonly columnNumbers = Array.from({ length: 45 }, (_, index) => index + 1);
   protected readonly fortressRowOne = [1, 2, 3, 4, 5];
   protected readonly fortressRowTwo = [6, 7, 8, 9, 10];
@@ -321,10 +320,6 @@ export class App {
     const armyA = this.parsedTurn?.deploymentAreaA ?? 'unknown';
     const armyB = this.parsedTurn?.deploymentAreaB ?? 'unknown';
     return `Sim ${sim} — A: ${armyA}, B: ${armyB}`;
-  }
-
-  protected onCellHover(cell: MapCell): void {
-    this.hoverText = `${cell.x}, ${cell.y}  ${cell.token}  height ${cell.height}`;
   }
 
   protected cellInSelectedZone(x: number, y: number): boolean {

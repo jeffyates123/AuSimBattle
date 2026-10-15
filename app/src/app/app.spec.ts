@@ -15,10 +15,10 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render app heading', async () => {
+  it('should render the load button before a turn is opened', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Austerlitz Sim Battle Setup');
+    expect(compiled.querySelector('button')?.textContent).toContain('Load New');
   });
 });

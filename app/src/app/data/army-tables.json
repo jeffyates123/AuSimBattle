@@ -1,0 +1,5782 @@
+{
+  "source": {
+    "document": "Austerlitz Rules.pdf",
+    "section": "9 Army Tables"
+  },
+  "nations": [
+    {
+      "name": "Austria-Hungary",
+      "aliases": [
+        "Austria"
+      ],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Fusilier",
+          "shortName": "Fu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 140,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 130,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 4,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Veteran Reserve",
+          "shortName": "Vr",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Light infantry",
+          "shortName": "Li",
+          "costLouisdore": 120,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 160,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 500,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 200,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 9,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Reserve Cavalry",
+          "shortName": "Rc",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 180,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 300,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 220,
+          "economicPointsPer25": 15,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Confederation of the Rhine",
+      "aliases": [
+        "Conf. of the Rhine"
+      ],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Fusilier",
+          "shortName": "Fu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 140,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Musketeer",
+          "shortName": "Mu",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 150,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 450,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 200,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 7,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Garde de Corps",
+          "shortName": "GC",
+          "costLouisdore": 250,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 8,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 31,
+          "typeName": "Reserve Cavalry",
+          "shortName": "Rc",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 180,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 320,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 230,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 8,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Denmark",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 150,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Line Infantry",
+          "shortName": "Ln",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 3,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Veteran Reserve",
+          "shortName": "Vr",
+          "costLouisdore": 80,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 150,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 450,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 23,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 24,
+          "typeName": "Carabiniers",
+          "shortName": "Cr",
+          "costLouisdore": 260,
+          "economicPointsPer25": 11,
+          "maxTrainingExperience": 8,
+          "handToHand": 7,
+          "longRange": 4,
+          "range": 5,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "King's Garde",
+          "shortName": "Kg",
+          "costLouisdore": 230,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 9,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Reserve Cavalry",
+          "shortName": "Rc",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 350,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 220,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Spain",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 160,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 5,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Light Infantry",
+          "shortName": "Li",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Line Infantry",
+          "shortName": "Ln",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Militia",
+          "shortName": "Mi",
+          "costLouisdore": 80,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 180,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 6,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Riflemen",
+          "shortName": "Rm",
+          "costLouisdore": 130,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 400,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 220,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 8,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 14,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 22,
+          "typeName": "Garde de Corps",
+          "shortName": "Gc",
+          "costLouisdore": 230,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 10,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Militia Cavalry",
+          "shortName": "Ml",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 6,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 330,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 36,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "France",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Line Infantry",
+          "shortName": "Ln",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 2,
+          "typeName": "Old Garde",
+          "shortName": "Og",
+          "costLouisdore": 300,
+          "economicPointsPer25": 10,
+          "maxTrainingExperience": 10,
+          "handToHand": 7,
+          "longRange": 4,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Grenadier",
+          "shortName": "Gr",
+          "costLouisdore": 140,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Tiralieur",
+          "shortName": "Ti",
+          "costLouisdore": 130,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Voltigeure",
+          "shortName": "Vo",
+          "costLouisdore": 110,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Militia",
+          "shortName": "Mi",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 150,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 400,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Chevauleger Lancier",
+          "shortName": "Cl",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 22,
+          "typeName": "Garde du Corps",
+          "shortName": "Gc",
+          "costLouisdore": 280,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 10,
+          "handToHand": 9,
+          "longRange": 3,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lr",
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 200,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 8,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 24,
+          "typeName": "Carabinier",
+          "shortName": "Cr",
+          "costLouisdore": 250,
+          "economicPointsPer25": 10,
+          "maxTrainingExperience": 8,
+          "handToHand": 7,
+          "longRange": 4,
+          "range": 5,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 27,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Militia Cavalry",
+          "shortName": "Ml",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 180,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 300,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 200,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 8,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Great Britain",
+      "aliases": [
+        "Britain",
+        "United Kingdom"
+      ],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Bearskin",
+          "shortName": "Be",
+          "costLouisdore": 160,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 5,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 2,
+          "typeName": "Footguard",
+          "shortName": "Fg",
+          "costLouisdore": 300,
+          "economicPointsPer25": 9,
+          "maxTrainingExperience": 10,
+          "handToHand": 6,
+          "longRange": 4,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Highlander",
+          "shortName": "Hi",
+          "costLouisdore": 130,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 160,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 8,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Line Infantry",
+          "shortName": "Ln",
+          "costLouisdore": 120,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 300,
+          "economicPointsPer25": 9,
+          "maxTrainingExperience": 8,
+          "handToHand": 3,
+          "longRange": 4,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Militia",
+          "shortName": "Mi",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 6,
+          "handToHand": 2,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 13,
+          "typeName": "Kings German Legion",
+          "shortName": "KL",
+          "costLouisdore": 130,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 400,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 22,
+          "typeName": "Household",
+          "shortName": "Hh",
+          "costLouisdore": 260,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 10,
+          "handToHand": 8,
+          "longRange": 3,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Light Dragoons",
+          "shortName": "lD",
+          "costLouisdore": 160,
+          "economicPointsPer25": 6,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": 2,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Chasseur Britanique",
+          "shortName": "CB",
+          "costLouisdore": 85,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Militia Cavalry",
+          "shortName": "Ml",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 310,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 8,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Holland",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Fusilier",
+          "shortName": "Fu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 160,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Musketeer",
+          "shortName": "Mu",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 150,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 400,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 200,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 7,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Garde du Corps",
+          "shortName": "Gc",
+          "costLouisdore": 250,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 9,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 31,
+          "typeName": "Militia Cavalry",
+          "shortName": "Ml",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 180,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 320,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 230,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 8,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Italy",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Fusilier",
+          "shortName": "Fu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 160,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Musketeer",
+          "shortName": "Mu",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 150,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 450,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 210,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 7,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Garde de Corps",
+          "shortName": "GC",
+          "costLouisdore": 250,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 8,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 31,
+          "typeName": "Reserve Cavalry",
+          "shortName": "Rc",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 180,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 320,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 230,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 8,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Kingdom of Portugal",
+      "aliases": [
+        "Portugal"
+      ],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 160,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 5,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Line Infantry",
+          "shortName": "Ln",
+          "costLouisdore": 110,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Cazadores",
+          "shortName": "Cz",
+          "costLouisdore": 140,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Atiradores",
+          "shortName": "AT",
+          "costLouisdore": 250,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 4,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Militia",
+          "shortName": "Mi",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 160,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 400,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Light Dragoons",
+          "shortName": "lD",
+          "costLouisdore": 160,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": 2,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Reserve Cavalry",
+          "shortName": "Rc",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 31,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 210,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 7,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 330,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Morocco",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Nomads",
+          "shortName": "No",
+          "costLouisdore": 50,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Zoaves",
+          "shortName": "Zo",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 8,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Turcos",
+          "shortName": "Tc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Religious Fanatics",
+          "shortName": "Rf",
+          "costLouisdore": 60,
+          "economicPointsPer25": 1,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": null,
+          "range": null,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Palace Guard",
+          "shortName": "Pa",
+          "costLouisdore": 140,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 200,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 6,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 450,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Berber",
+          "shortName": "Be",
+          "costLouisdore": 60,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 300,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 6,
+          "handToHand": 5,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 200,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Camel Troops",
+          "shortName": "Ct",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 6,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Tuareg",
+          "shortName": "Tu",
+          "costLouisdore": 60,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 31,
+          "typeName": "Siphais",
+          "shortName": "Si",
+          "costLouisdore": 350,
+          "economicPointsPer25": 15,
+          "maxTrainingExperience": 7,
+          "handToHand": 7,
+          "longRange": null,
+          "range": null,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lr",
+            "Cu"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 26,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 320,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 15,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Naples",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 160,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 5,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Light Infantry",
+          "shortName": "Li",
+          "costLouisdore": 110,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Line Infantry",
+          "shortName": "Ln",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Militia",
+          "shortName": "Mi",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 180,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 6,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Riflemen",
+          "shortName": "Rm",
+          "costLouisdore": 130,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 450,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 220,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 7,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 14,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 22,
+          "typeName": "Garde du Corps",
+          "shortName": "GC",
+          "costLouisdore": 300,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 10,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Reserve Cavalry",
+          "shortName": "Rc",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 320,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 36,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Prussia",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Fusilier",
+          "shortName": "Fu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 2,
+          "typeName": "Avantgarde",
+          "shortName": "Av",
+          "costLouisdore": 250,
+          "economicPointsPer25": 10,
+          "maxTrainingExperience": 10,
+          "handToHand": 7,
+          "longRange": 4,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 140,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 130,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 3,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Veteran Reserve",
+          "shortName": "Vr",
+          "costLouisdore": 60,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 160,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 8,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 500,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 220,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 7,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 31,
+          "typeName": "Mounted Reserve",
+          "shortName": "Mr",
+          "costLouisdore": 70,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 4,
+          "simMovement": 18,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 350,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 280,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 36,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Russia",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 150,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 2,
+          "typeName": "Garde Grenadiers",
+          "shortName": "Gg",
+          "costLouisdore": 300,
+          "economicPointsPer25": 10,
+          "maxTrainingExperience": 10,
+          "handToHand": 7,
+          "longRange": 4,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Rifleman",
+          "shortName": "Rm",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 3,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 4,
+          "typeName": "Garde Riflemen",
+          "shortName": "GA",
+          "costLouisdore": 300,
+          "economicPointsPer25": 10,
+          "maxTrainingExperience": 10,
+          "handToHand": 5,
+          "longRange": 4,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Musketeer",
+          "shortName": "Mu",
+          "costLouisdore": 90,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 190,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 6,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Farmer Militia",
+          "shortName": "Fm",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 500,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 230,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 8,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 22,
+          "typeName": "Garde Cuirassier",
+          "shortName": "Gc",
+          "costLouisdore": 270,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 10,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 120,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Cossacks",
+          "shortName": "Co",
+          "costLouisdore": 80,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 5,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 140,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 300,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 8,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 15,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 36,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Sweden",
+      "aliases": [],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 150,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Militia",
+          "shortName": "Mi",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Musketeer",
+          "shortName": "Mu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Riflemen",
+          "shortName": "Rm",
+          "costLouisdore": 120,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 8,
+          "handToHand": 3,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 150,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 450,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 160,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 22,
+          "typeName": "Special Garde",
+          "shortName": "SG",
+          "costLouisdore": 300,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 10,
+          "handToHand": 8,
+          "longRange": 3,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Irregulars",
+          "shortName": "Ir",
+          "costLouisdore": 80,
+          "economicPointsPer25": 3,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 25,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 220,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 7,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 150,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 18,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 320,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 16,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 36,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Ottoman Empire",
+      "aliases": [
+        "the Ottoman Empire",
+        "Turkey"
+      ],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Palace Guard",
+          "shortName": "PG",
+          "costLouisdore": 200,
+          "economicPointsPer25": 6,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Warriors",
+          "shortName": "Wa",
+          "costLouisdore": 70,
+          "economicPointsPer25": 1,
+          "maxTrainingExperience": 5,
+          "handToHand": 2,
+          "longRange": null,
+          "range": null,
+          "simMovement": 10,
+          "mapMovement": 28,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Light Infantry",
+          "shortName": "Li",
+          "costLouisdore": 130,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Line Infantry",
+          "shortName": "Ln",
+          "costLouisdore": 100,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 3,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Janitshars",
+          "shortName": "Ja",
+          "costLouisdore": 75,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 28,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 11,
+          "typeName": "Pioneer",
+          "shortName": "Pi",
+          "costLouisdore": 200,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 6,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 500,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Sipahis",
+          "shortName": "Sp",
+          "costLouisdore": 350,
+          "economicPointsPer25": 15,
+          "maxTrainingExperience": 8,
+          "handToHand": 7,
+          "longRange": null,
+          "range": null,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lr",
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Dragoon",
+          "shortName": "Dr",
+          "costLouisdore": 200,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 6,
+          "handToHand": 5,
+          "longRange": 1,
+          "range": 3,
+          "simMovement": 18,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 25,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 150,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Mamelukes",
+          "shortName": "Mm",
+          "costLouisdore": 110,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 8,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Uhlan",
+          "shortName": "Uh",
+          "costLouisdore": 180,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 36,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 230,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 360,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 6,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 280,
+          "economicPointsPer25": 15,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 36,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    },
+    {
+      "name": "Duchy of Warsaw",
+      "aliases": [
+        "Warsaw"
+      ],
+      "battalions": [
+        {
+          "no": 1,
+          "typeName": "Fusilier",
+          "shortName": "Fu",
+          "costLouisdore": 100,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 3,
+          "typeName": "Grenadier",
+          "shortName": "GR",
+          "costLouisdore": 160,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 8,
+          "handToHand": 6,
+          "longRange": 3,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 5,
+          "typeName": "Voltigeur",
+          "shortName": "Vo",
+          "costLouisdore": 120,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 3,
+          "range": 8,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 7,
+          "typeName": "Militia",
+          "shortName": "Mi",
+          "costLouisdore": 80,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 5,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 9,
+          "typeName": "Pioneers",
+          "shortName": "Pi",
+          "costLouisdore": 180,
+          "economicPointsPer25": 7,
+          "maxTrainingExperience": 7,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 17,
+          "typeName": "Colonial Auxiliaries",
+          "shortName": "Ca",
+          "costLouisdore": 70,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 2,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 10,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 19,
+          "typeName": "Colonial Troops",
+          "shortName": "Kt",
+          "costLouisdore": 500,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 6,
+          "simMovement": 8,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk",
+            "Sq"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 21,
+          "typeName": "Chevauleger Lancier",
+          "shortName": "Cl",
+          "costLouisdore": 120,
+          "economicPointsPer25": 8,
+          "maxTrainingExperience": 7,
+          "handToHand": 6,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 22,
+          "typeName": "Garde Chevauleger",
+          "shortName": "Gc",
+          "costLouisdore": 250,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 10,
+          "handToHand": 8,
+          "longRange": 2,
+          "range": 3,
+          "simMovement": 14,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 23,
+          "typeName": "Cuirassier",
+          "shortName": "Cu",
+          "costLouisdore": 200,
+          "economicPointsPer25": 14,
+          "maxTrainingExperience": 8,
+          "handToHand": 8,
+          "longRange": null,
+          "range": null,
+          "simMovement": 12,
+          "mapMovement": 32,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Cu"
+          ]
+        },
+        {
+          "no": 25,
+          "typeName": "Cossacks",
+          "shortName": "Co",
+          "costLouisdore": 90,
+          "economicPointsPer25": 4,
+          "maxTrainingExperience": 6,
+          "handToHand": 5,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 27,
+          "typeName": "Mounted Riflemen",
+          "shortName": "MR",
+          "costLouisdore": 120,
+          "economicPointsPer25": 6,
+          "maxTrainingExperience": 7,
+          "handToHand": 4,
+          "longRange": 2,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 29,
+          "typeName": "Hussar",
+          "shortName": "Hu",
+          "costLouisdore": 110,
+          "economicPointsPer25": 5,
+          "maxTrainingExperience": 6,
+          "handToHand": 4,
+          "longRange": 1,
+          "range": 7,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 37,
+          "typeName": "Mounted Colonials",
+          "shortName": "Mc",
+          "costLouisdore": 100,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 3,
+          "longRange": 1,
+          "range": 6,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Sk"
+          ],
+          "troopSpecs": [
+            "Lc"
+          ]
+        },
+        {
+          "no": 39,
+          "typeName": "Colonial Cavalry",
+          "shortName": "Cc",
+          "costLouisdore": 120,
+          "economicPointsPer25": 2,
+          "maxTrainingExperience": 4,
+          "handToHand": 4,
+          "longRange": null,
+          "range": null,
+          "simMovement": 20,
+          "mapMovement": 40,
+          "formations": [
+            "Co",
+            "Li"
+          ],
+          "troopSpecs": [
+            "Lc",
+            "Lr"
+          ]
+        },
+        {
+          "no": 41,
+          "typeName": "Light Artillery",
+          "shortName": "La",
+          "costLouisdore": 200,
+          "economicPointsPer25": 12,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 12,
+          "simMovement": 6,
+          "mapMovement": 32,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 43,
+          "typeName": "Heavy Artillery",
+          "shortName": "Ha",
+          "costLouisdore": 300,
+          "economicPointsPer25": 20,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 15,
+          "simMovement": 4,
+          "mapMovement": 24,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        },
+        {
+          "no": 45,
+          "typeName": "Mounted Artillery",
+          "shortName": "Ma",
+          "costLouisdore": 250,
+          "economicPointsPer25": 15,
+          "maxTrainingExperience": 7,
+          "handToHand": 1,
+          "longRange": 5,
+          "range": 10,
+          "simMovement": 12,
+          "mapMovement": 40,
+          "formations": [
+            "Co"
+          ],
+          "troopSpecs": []
+        }
+      ]
+    }
+  ],
+  "generatedAt": "2026-10-15T20:29:25.145Z"
+}

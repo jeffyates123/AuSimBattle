@@ -36,6 +36,7 @@ export class App {
   protected parseError = '';
   protected exportError = '';
   protected statusMessage = '';
+  protected sheetView: 'header' | 'deploy' = 'header';
   protected readonly columnNumbers = Array.from({ length: 45 }, (_, index) => index + 1);
   protected readonly fortressRowOne = [1, 2, 3, 4, 5];
   protected readonly fortressRowTwo = [6, 7, 8, 9, 10];
@@ -89,13 +90,14 @@ export class App {
     }
   }
 
-  protected onArmySelected(army: BattleHeader['army']): void {
+  protected onArmySelected(army: BattleHeader['army'] | string | null): void {
     if (!this.header) {
       return;
     }
-    this.header.army = army;
-    if (army === 'Army A' || army === 'Army B') {
-      const side: ArmySide = army === 'Army A' ? 'A' : 'B';
+    const normalizedArmy = this.normalizeArmySelection(army);
+    this.header.army = normalizedArmy;
+    if (normalizedArmy === 'Army A' || normalizedArmy === 'Army B') {
+      const side: ArmySide = normalizedArmy === 'Army A' ? 'A' : 'B';
       if (this.parsedTurn?.armies.length) {
         this.pickArmy(side);
         return;
@@ -315,11 +317,36 @@ export class App {
     return shadows.join(', ');
   }
 
-  protected mapCaption(): string {
-    const sim = this.parsedTurn?.simNumber ?? 'unknown';
-    const armyA = this.parsedTurn?.deploymentAreaA ?? 'unknown';
-    const armyB = this.parsedTurn?.deploymentAreaB ?? 'unknown';
-    return `Sim ${sim} — A: ${armyA}, B: ${armyB}`;
+  protected cellShadow(cell: MapCell): string {
+    const shadows = [this.zoneShadow(cell), this.specialBorderShadow(cell), this.strategicPointShadow(cell)].filter(
+      (value) => value.length > 0,
+    );
+    return shadows.join(', ');
+  }
+
+  protected selectedDeploymentSummary(): string {
+    const brief = this.parsedTurn?.battleBrief;
+    if (!brief || !this.selectedArmySide) {
+      return 'Deployment area A, unknown Federations (Maximum): unknown';
+    }
+    const area = this.selectedArmySide === 'A' ? brief.deploymentAreaA : brief.deploymentAreaB;
+    return `Deployment area ${this.selectedArmySide}, ${area.maxFederations ?? 'unknown'} Federations (Maximum): ${area.name ?? 'unknown'}`;
+  }
+
+  protected selectedMainTerrain(): string {
+    const terrain = this.parsedTurn?.battleBrief.mainTerrain ?? 'unknown';
+    return `Main terrain: ${terrain}`;
+  }
+
+  protected battleBriefLine(): string {
+    const brief = this.parsedTurn?.battleBrief;
+    if (!brief) {
+      return 'Opponents: unknown. Battlefield coordinates: unknown. A: unknown. B: unknown.';
+    }
+
+    const sideAText = this.battleSideSummary(brief.deploymentAreaA.name, brief.deploymentAreaA.maxFederations);
+    const sideBText = this.battleSideSummary(brief.deploymentAreaB.name, brief.deploymentAreaB.maxFederations);
+    return `Opponents: ${brief.opponents ?? 'unknown'}. Battlefield coordinates: ${brief.battlefieldCoordinates ?? 'unknown'}. A: ${sideAText}. B: ${sideBText}.`;
   }
 
   protected cellInSelectedZone(x: number, y: number): boolean {
@@ -412,6 +439,70 @@ export class App {
     return `${x},${y}`;
   }
 
+  private normalizeArmySelection(army: BattleHeader['army'] | string | null): BattleHeader['army'] {
+    if (!army) {
+      return null;
+    }
+    const value = String(army).trim();
+    if (value === 'Army A' || value.endsWith('Army A')) {
+      return 'Army A';
+    }
+    if (value === 'Army B' || value.endsWith('Army B')) {
+      return 'Army B';
+    }
+    return null;
+  }
+
+  private specialBorderShadow(cell: MapCell): string {
+    if (!cell.token.startsWith('$')) {
+      return '';
+    }
+
+    const shadows: string[] = [];
+    if (!this.isSpecialCoordinate(cell.x - 1, cell.y)) {
+      shadows.push('inset 1px 0 0 #000');
+    }
+    shadows.push('inset -1px 0 0 #000');
+    if (!this.isSpecialCoordinate(cell.x, cell.y - 1)) {
+      shadows.push('inset 0 1px 0 #000');
+    }
+    shadows.push('inset 0 -1px 0 #000');
+    return shadows.join(', ');
+  }
+
+  private isSpecialCoordinate(x: number, y: number): boolean {
+    if (x < 1 || x > this.mapWidth || y < 1 || y > this.mapHeight) {
+      return false;
+    }
+    const cell = this.rows[y - 1]?.[x - 1];
+    return cell?.x === x && cell.token.startsWith('$');
+  }
+
+  private strategicPointShadow(cell: MapCell): string {
+    const brief = this.parsedTurn?.battleBrief;
+    if (!brief) {
+      return '';
+    }
+
+    const isA = brief.deploymentAreaA.strategicPoints.some((point) => point.x === cell.x && point.y === cell.y);
+    const isB = brief.deploymentAreaB.strategicPoints.some((point) => point.x === cell.x && point.y === cell.y);
+
+    if (isA && isB) {
+      return 'inset 0 0 0 4px #ff2d2d, inset 0 0 0 7px #3d8bff';
+    }
+    if (isA) {
+      return 'inset 0 0 0 4px #ff2d2d';
+    }
+    if (isB) {
+      return 'inset 0 0 0 4px #3d8bff';
+    }
+    return '';
+  }
+
+  private battleSideSummary(name: string | null, maxFederations: number | null): string {
+    return `${name ?? 'unknown'}, ${maxFederations ?? 'unknown'} federations`;
+  }
+
   private emptyFortressEntrenchments(): Array<{ x: number | null; y: number | null }> {
     return Array.from({ length: 10 }, () => ({ x: null, y: null }));
   }
@@ -422,15 +513,16 @@ export class App {
     if (!this.header.processDate) {
       this.header.processDate = new Date().toISOString().slice(0, 10);
     }
+    const preferredArmySide: ArmySide = this.header.army === 'Army B' ? 'B' : 'A';
     this.fortressEntrenchments = this.emptyFortressEntrenchments();
-    this.header.army = 'Army A';
-    this.selectedArmySide = 'A';
+    this.header.army = preferredArmySide === 'A' ? 'Army A' : 'Army B';
+    this.selectedArmySide = preferredArmySide;
     this.selectedArmy = null;
     this.enemyArmy = null;
     this.placements = new Map<number, Coordinate>();
     this.rows = this.buildRows(this.parsedTurn.mapCells);
     this.ownByCoord.clear();
     this.enemyByCoord.clear();
-    this.statusMessage = 'Turn parsed. Army A selected.';
+    this.statusMessage = `Turn parsed. Army ${preferredArmySide} selected.`;
   }
 }

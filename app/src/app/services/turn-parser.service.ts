@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BattleHeader } from '../models/battle';
-import { MapCell, ParsedTurn, TerrainFeature } from '../models/turn';
+import { ArmySide, BattleBrief, DeploymentAreaBrief, MapCell, ParsedTurn, StrategicPoint, TerrainFeature } from '../models/turn';
 
 @Injectable({ providedIn: 'root' })
 export class TurnParserService {
@@ -11,14 +11,17 @@ export class TurnParserService {
     const lines = text.replace(/\r\n/g, '\n').split('\n');
     const battle = this.findBattleField(lines);
     const mapCells = this.parseMap(lines, battle.mapStart);
-    const areas = this.parseDeploymentAreas(lines, battle.mapStart);
+    const battleBrief = this.parseBattleBrief(lines, battle.mapStart);
+    const header = this.parseHeader(lines, battle.headerLine, battle.simNumber);
+    header.army = this.armyFromState(header.state, battleBrief) === 'A' ? 'Army A' : 'Army B';
 
     return {
-      header: this.parseHeader(lines, battle.headerLine, battle.simNumber),
+      header,
       simNumber: battle.simNumber,
       mapCells,
-      deploymentAreaA: areas.a,
-      deploymentAreaB: areas.b,
+      deploymentAreaA: battleBrief.deploymentAreaA.name,
+      deploymentAreaB: battleBrief.deploymentAreaB.name,
+      battleBrief,
       armies: [],
     };
   }
@@ -135,27 +138,102 @@ export class TurnParserService {
     }
   }
 
-  private parseDeploymentAreas(lines: string[], startIndex: number): { a: string | null; b: string | null } {
-    let a: string | null = null;
-    let b: string | null = null;
-    const end = Math.min(lines.length, startIndex + 80);
+  private parseBattleBrief(lines: string[], startIndex: number): BattleBrief {
+    const brief: BattleBrief = {
+      opponents: null,
+      battlefieldCoordinates: null,
+      mainTerrain: null,
+      deploymentAreaA: this.emptyDeploymentArea('A'),
+      deploymentAreaB: this.emptyDeploymentArea('B'),
+    };
+    const end = Math.min(lines.length, startIndex + 120);
 
     for (let i = startIndex; i < end; i += 1) {
       const line = lines[i] ?? '';
-      const areaA = line.match(/Deployment area A,.*?Maximum\):\s*(.+)$/i);
-      const areaB = line.match(/Deployment area B,.*?Maximum\):\s*(.+)$/i);
-      if (areaA) {
-        a = areaA[1].trim();
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
       }
-      if (areaB) {
-        b = areaB[1].trim();
+
+      const opponentsMatch = trimmed.match(/^Opponents:\s*(.+)$/i);
+      if (opponentsMatch) {
+        brief.opponents = opponentsMatch[1].trim();
+        continue;
       }
-      if (a && b) {
+
+      const coordinatesMatch = trimmed.match(/^Battlefield coordinates:\s*(.+)$/i);
+      if (coordinatesMatch) {
+        brief.battlefieldCoordinates = coordinatesMatch[1].trim();
+        continue;
+      }
+
+      const deploymentMatch = trimmed.match(
+        /^Deployment area\s*([AB])\s*,\s*(\d+)\s+Federations\s*\(Maximum\)\s*:\s*(.+)$/i,
+      );
+      if (deploymentMatch) {
+        const side = deploymentMatch[1].toUpperCase() as ArmySide;
+        const target = side === 'A' ? brief.deploymentAreaA : brief.deploymentAreaB;
+        target.maxFederations = Number(deploymentMatch[2]);
+        target.name = deploymentMatch[3].trim();
+        continue;
+      }
+
+      const strategicPointsMatch = trimmed.match(/^Strategic points\s*([AB])\s*:\s*(.+)$/i);
+      if (strategicPointsMatch) {
+        const side = strategicPointsMatch[1].toUpperCase() as ArmySide;
+        const target = side === 'A' ? brief.deploymentAreaA : brief.deploymentAreaB;
+        target.strategicPoints = this.parseStrategicPoints(strategicPointsMatch[2]);
+        continue;
+      }
+
+      const terrainMatch = trimmed.match(/^Main terrain:\s*([A-Za-z])$/i);
+      if (terrainMatch) {
+        brief.mainTerrain = terrainMatch[1].toUpperCase();
         break;
       }
     }
 
-    return { a, b };
+    return brief;
+  }
+
+  private parseStrategicPoints(raw: string): StrategicPoint[] {
+    const points: StrategicPoint[] = [];
+    const regex = /(\d+)\s*\/\s*(\d+)/g;
+    let match: RegExpExecArray | null = regex.exec(raw);
+    while (match) {
+      points.push({
+        x: Number(match[1]),
+        y: Number(match[2]),
+      });
+      match = regex.exec(raw);
+    }
+    return points;
+  }
+
+  private emptyDeploymentArea(side: ArmySide): DeploymentAreaBrief {
+    return {
+      side,
+      name: null,
+      maxFederations: null,
+      strategicPoints: [],
+    };
+  }
+
+  private armyFromState(state: string | null, brief: BattleBrief): ArmySide {
+    const normalizedState = this.normalizeName(state);
+    if (!normalizedState) {
+      return 'A';
+    }
+
+    if (this.normalizeName(brief.deploymentAreaB.name) === normalizedState) {
+      return 'B';
+    }
+
+    return 'A';
+  }
+
+  private normalizeName(name: string | null): string {
+    return (name ?? '').trim().toLowerCase();
   }
 
   private parseHeader(lines: string[], battleLine: number, simNumber: number): BattleHeader {

@@ -29,6 +29,7 @@
 }
 
 .sheet-head {
+  position: relative;
   background: #1a2331;
   color: #e8edf5;
   border: 1px solid #2c3d58;
@@ -38,6 +39,37 @@
   gap: 10px;
   width: max-content;
   max-width: 100%;
+}
+
+.view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.view-toggle input {
+  accent-color: #76a3ff;
+}
+
+.deploy-line {
+  display: none;
+  margin: 0;
+  white-space: nowrap;
+  font-weight: 700;
+  color: #d7e6ff;
+}
+
+.sheet-head.show-deploy .sheet-fields > :not(.load-under-fortress) {
+  visibility: hidden;
+}
+
+.sheet-head.show-deploy .deploy-line {
+  display: block;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
 }
 
 .sheet-fields {
@@ -288,10 +320,10 @@ input[type='date'] {
   margin: 0;
 }
 
-.map-caption {
-  margin: 0;
-  color: #d7e6ff;
-  font-weight: 700;
+.battle-brief-line {
+  margin: 0 0 8px;
+  color: #b9d9ff;
+  font-size: 0.85rem;
 }
 
 .map-grid {

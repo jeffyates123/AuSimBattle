@@ -12,6 +12,22 @@ describe('TurnParserService battlefield', () => {
     expect(battle.simNumber).toBe(204);
     expect(battle.deploymentAreaA).toBe('Conf. of the Rhine');
     expect(battle.deploymentAreaB).toBe('Duchy of Warsaw');
+    expect(battle.header.army).toBe('Army B');
+    expect(battle.battleBrief.opponents).toBe('Conf. of the Rhine vs Duchy of Warsaw');
+    expect(battle.battleBrief.battlefieldCoordinates).toBe('44 / 27');
+    expect(battle.battleBrief.mainTerrain).toBe('G');
+    expect(battle.battleBrief.deploymentAreaA.maxFederations).toBe(99);
+    expect(battle.battleBrief.deploymentAreaB.maxFederations).toBe(81);
+    expect(battle.battleBrief.deploymentAreaA.strategicPoints).toEqual([
+      { x: 12, y: 3 },
+      { x: 23, y: 2 },
+      { x: 17, y: 5 },
+    ]);
+    expect(battle.battleBrief.deploymentAreaB.strategicPoints).toEqual([
+      { x: 28, y: 36 },
+      { x: 18, y: 39 },
+      { x: 35, y: 35 },
+    ]);
     expect(battle.mapCells).toHaveLength(45 * 40);
 
     const highGround = battle.mapCells.find((cell) => cell.x === 20 && cell.y === 1);
@@ -29,6 +45,10 @@ describe('TurnParserService battlefield', () => {
     const battle = parser.parse(text);
 
     expect(battle.simNumber).toBe(196);
+    expect(battle.header.army).toBe('Army A');
+    expect(battle.battleBrief.mainTerrain).toBe('B');
+    expect(battle.battleBrief.deploymentAreaA.maxFederations).toBe(102);
+    expect(battle.battleBrief.deploymentAreaB.maxFederations).toBe(78);
     expect(battle.mapCells).toHaveLength(45 * 40);
     expect(battle.mapCells[0]?.token).toBe('.2');
   });

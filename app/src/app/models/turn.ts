@@ -45,11 +45,32 @@ export interface ArmyData {
   units: FederationUnit[];
 }
 
+export interface StrategicPoint {
+  x: number;
+  y: number;
+}
+
+export interface DeploymentAreaBrief {
+  side: ArmySide;
+  name: string | null;
+  maxFederations: number | null;
+  strategicPoints: StrategicPoint[];
+}
+
+export interface BattleBrief {
+  opponents: string | null;
+  battlefieldCoordinates: string | null;
+  mainTerrain: string | null;
+  deploymentAreaA: DeploymentAreaBrief;
+  deploymentAreaB: DeploymentAreaBrief;
+}
+
 export interface ParsedTurn {
   header: BattleHeader;
   simNumber: number | null;
   mapCells: MapCell[];
   deploymentAreaA: string | null;
   deploymentAreaB: string | null;
+  battleBrief: BattleBrief;
   armies: ArmyData[];
 }

@@ -1,0 +1,640 @@
+{
+  "source": {
+    "document": "Austerlitz Rules.pdf",
+    "section": "7.2 Simulated Land Battle"
+  },
+  "battlefield": {
+    "width": 45,
+    "height": 40,
+    "setupAreas": {
+      "A": {
+        "minX": 11,
+        "maxX": 35,
+        "minY": 1,
+        "maxY": 10
+      },
+      "B": {
+        "minX": 11,
+        "maxX": 35,
+        "minY": 31,
+        "maxY": 40
+      }
+    },
+    "strategicPointsPerSide": 3,
+    "strategicPointsMinDistance": 5
+  },
+  "orders": {
+    "movementAttack": [
+      {
+        "code": 11,
+        "name": "Attack if in Reach"
+      },
+      {
+        "code": 12,
+        "name": "Attack on Sight"
+      },
+      {
+        "code": 13,
+        "name": "Staged Retreat"
+      },
+      {
+        "code": 21,
+        "name": "Attack All Enemy Strategic Points"
+      },
+      {
+        "code": 22,
+        "name": "Attack Unguarded Enemy Strategic Points"
+      },
+      {
+        "code": 23,
+        "name": "Defend Own Strategic Points"
+      },
+      {
+        "code": 24,
+        "name": "Recover Own Strategic Points"
+      },
+      {
+        "code": 31,
+        "name": "Attack and Reform"
+      },
+      {
+        "code": 32,
+        "name": "Indiscriminate Fire Upon Enemy"
+      },
+      {
+        "code": 33,
+        "name": "Selective Fire Upon Enemy"
+      },
+      {
+        "code": 34,
+        "name": "Retreat from Battlefield"
+      }
+    ],
+    "pioneerOnly": [
+      {
+        "code": 36,
+        "name": "Dig Entrenchments"
+      },
+      {
+        "code": 37,
+        "name": "Build Pontoon Bridge"
+      },
+      {
+        "code": 38,
+        "name": "Move and Destroy Entrenchments"
+      },
+      {
+        "code": 39,
+        "name": "Move and Destroy Pontoon Bridges"
+      }
+    ],
+    "detachmentOrders": [
+      {
+        "code": 41,
+        "position": "in front of"
+      },
+      {
+        "code": 42,
+        "position": "ahead and left of"
+      },
+      {
+        "code": 43,
+        "position": "right of"
+      },
+      {
+        "code": 44,
+        "position": "behind and right of"
+      },
+      {
+        "code": 45,
+        "position": "behind of"
+      },
+      {
+        "code": 46,
+        "position": "behind and left of"
+      },
+      {
+        "code": 47,
+        "position": "left of"
+      },
+      {
+        "code": 48,
+        "position": "ahead and right of"
+      }
+    ],
+    "swapDetachmentOrders": [
+      {
+        "code": 51,
+        "position": "in front of"
+      },
+      {
+        "code": 52,
+        "position": "ahead and left of"
+      },
+      {
+        "code": 53,
+        "position": "right of"
+      },
+      {
+        "code": 54,
+        "position": "behind and right of"
+      },
+      {
+        "code": 55,
+        "position": "behind of"
+      },
+      {
+        "code": 56,
+        "position": "behind and left of"
+      },
+      {
+        "code": 57,
+        "position": "left of"
+      },
+      {
+        "code": 58,
+        "position": "ahead and right of"
+      }
+    ],
+    "additionalOrders": {
+      "troopTypeFilters": [
+        {
+          "code": 0,
+          "meaning": "all troop types"
+        },
+        {
+          "code": 1,
+          "meaning": "infantry in column"
+        },
+        {
+          "code": 2,
+          "meaning": "infantry in line"
+        },
+        {
+          "code": 3,
+          "meaning": "skirmishing infantry"
+        },
+        {
+          "code": 4,
+          "meaning": "infantry in square"
+        },
+        {
+          "code": 5,
+          "meaning": "fleeing infantry"
+        },
+        {
+          "code": 7,
+          "meaning": "infantry in line or column"
+        },
+        {
+          "code": 8,
+          "meaning": "skirmishing infantry or infantry in line or column"
+        },
+        {
+          "code": 9,
+          "meaning": "infantry in any formation"
+        },
+        {
+          "code": 11,
+          "meaning": "cavalry in column"
+        },
+        {
+          "code": 12,
+          "meaning": "cavalry in line"
+        },
+        {
+          "code": 13,
+          "meaning": "skirmishing cavalry"
+        },
+        {
+          "code": 15,
+          "meaning": "fleeing cavalry"
+        },
+        {
+          "code": 19,
+          "meaning": "cavalry in any formation"
+        },
+        {
+          "code": 21,
+          "meaning": "artillery"
+        },
+        {
+          "code": 28,
+          "meaning": "all fleeing enemy federations"
+        },
+        {
+          "code": 29,
+          "meaning": "all troop types"
+        },
+        {
+          "code": 30,
+          "meaning": "no reaction to any troop type"
+        }
+      ],
+      "strategicPointSequence": [
+        {
+          "code": 1,
+          "sequence": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "code": 2,
+          "sequence": [
+            1,
+            3,
+            2
+          ]
+        },
+        {
+          "code": 3,
+          "sequence": [
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "code": 4,
+          "sequence": [
+            2,
+            3,
+            1
+          ]
+        },
+        {
+          "code": 5,
+          "sequence": [
+            3,
+            1,
+            2
+          ]
+        },
+        {
+          "code": 6,
+          "sequence": [
+            3,
+            2,
+            1
+          ]
+        }
+      ]
+    },
+    "formationOrders": [
+      {
+        "code": 1,
+        "formation": "Co"
+      },
+      {
+        "code": 2,
+        "formation": "Li"
+      },
+      {
+        "code": 3,
+        "formation": "Sk"
+      },
+      {
+        "code": 4,
+        "formation": "Sq"
+      }
+    ],
+    "alternativeConditions": {
+      "roundStartRange": {
+        "min": 1,
+        "max": 25
+      },
+      "headcountDropBelowCodes": [
+        {
+          "code": 30,
+          "headcount": 750
+        },
+        {
+          "code": 31,
+          "headcount": 1000
+        },
+        {
+          "code": 32,
+          "headcount": 1250
+        },
+        {
+          "code": 33,
+          "headcount": 1500
+        },
+        {
+          "code": 34,
+          "headcount": 1750
+        },
+        {
+          "code": 35,
+          "headcount": 2000
+        },
+        {
+          "code": 36,
+          "headcount": 2250
+        },
+        {
+          "code": 37,
+          "headcount": 2500
+        },
+        {
+          "code": 38,
+          "headcount": 2750
+        },
+        {
+          "code": 39,
+          "headcount": 3000
+        }
+      ],
+      "other": [
+        {
+          "code": 41,
+          "meaning": "last destination reached"
+        },
+        {
+          "code": 45,
+          "meaning": "own army gained advantage"
+        },
+        {
+          "code": 46,
+          "meaning": "enemy army gained advantage"
+        }
+      ]
+    }
+  },
+  "movement": {
+    "baseMpCostByTerrain": {
+      "clear": {
+        "infantry": 2,
+        "cavalry": 2,
+        "artillery": 2
+      },
+      "forest_woods": {
+        "infantry": 4,
+        "cavalry": 8,
+        "artillery": null
+      },
+      "bushes_shrubs": {
+        "infantry": 3,
+        "cavalry": 4,
+        "artillery": null
+      },
+      "villages": {
+        "infantry": 4,
+        "cavalry": null,
+        "artillery": null
+      },
+      "entrenchments": {
+        "infantry": 4,
+        "cavalry": 8,
+        "artillery": 6
+      },
+      "river": {
+        "infantry": 25,
+        "cavalry": 25,
+        "artillery": 25
+      },
+      "pontoon_bridge": {
+        "infantry": 4,
+        "cavalry": 4,
+        "artillery": 4
+      },
+      "fortress_walls": {
+        "infantry": null,
+        "cavalry": null,
+        "artillery": null
+      }
+    },
+    "altitudeRiseCostPerLevel": 1,
+    "fleeingMovementPercentOfMpPerHalfRound": 60,
+    "minimumMovePerRoundExceptRiverCrossing": 1
+  },
+  "longRangeCombat": {
+    "formula": {
+      "expression": "LR * EF * Men * random(1..3) / 1500",
+      "randomMin": 1,
+      "randomMax": 3,
+      "divisor": 1500
+    },
+    "firingFormationEffectivenessPercent": {
+      "column": {
+        "infantry": 40,
+        "cavalry": 40,
+        "artillery": 100
+      },
+      "line": {
+        "infantry": 80,
+        "cavalry": 80,
+        "artillery": null
+      },
+      "skirmish": {
+        "infantry": 100,
+        "cavalry": 100,
+        "artillery": null
+      },
+      "square": {
+        "infantry": 20,
+        "cavalry": null,
+        "artillery": null
+      },
+      "flight": {
+        "infantry": 0,
+        "cavalry": 0,
+        "artillery": 0
+      }
+    },
+    "targetFormationExposurePercent": {
+      "column": {
+        "infantry": 100,
+        "cavalry": 85,
+        "artillery": 80
+      },
+      "line": {
+        "infantry": 80,
+        "cavalry": 75,
+        "artillery": null
+      },
+      "skirmish": {
+        "infantry": 50,
+        "cavalry": 40,
+        "artillery": null
+      },
+      "square": {
+        "infantry": 100,
+        "cavalry": null,
+        "artillery": null
+      },
+      "flight": {
+        "infantry": 100,
+        "cavalry": 90,
+        "artillery": 100
+      }
+    },
+    "distanceMultiplierPercent": [
+      {
+        "distance": "1",
+        "infantryCavalry": 100,
+        "artillery": 250
+      },
+      {
+        "distance": "2",
+        "infantryCavalry": 80,
+        "artillery": 200
+      },
+      {
+        "distance": "3",
+        "infantryCavalry": 50,
+        "artillery": 150
+      },
+      {
+        "distance": "4",
+        "infantryCavalry": 50,
+        "artillery": 100
+      },
+      {
+        "distance": "5",
+        "infantryCavalry": 50,
+        "artillery": 75
+      },
+      {
+        "distance": "6+",
+        "infantryCavalry": 35,
+        "artillery": 75
+      }
+    ],
+    "terrainExposurePercent": {
+      "clear": 100,
+      "forest": 60,
+      "bushes": 80,
+      "village": 50,
+      "fortress_wall": null,
+      "river_bridge": 125
+    },
+    "phaseEffectivenessPercent": {
+      "defensiveFire": 75,
+      "offensiveFire": 100,
+      "offensiveFireAfterMovement": 75
+    },
+    "modifiers": [
+      "armoured cavalry (Cu) have 30% fewer casualties",
+      "troops that moved in the half-round shoot at 75% effectiveness",
+      "artillery that moved in this or previous half-round cannot perform long-range combat"
+    ]
+  },
+  "handToHandCombat": {
+    "formula": {
+      "expression": "HC * EF * Men * random(1..3) / 1500",
+      "randomMin": 1,
+      "randomMax": 3,
+      "divisor": 1500
+    },
+    "formationEffectivenessPercent": {
+      "column": {
+        "infantry": 100,
+        "cavalry": 100,
+        "artillery": 100
+      },
+      "line": {
+        "infantry": 60,
+        "cavalry": 60,
+        "artillery": null
+      },
+      "skirmishing": {
+        "infantry": 40,
+        "cavalry": 40,
+        "artillery": null
+      },
+      "square": {
+        "infantry": 35,
+        "cavalry": null,
+        "artillery": null
+      },
+      "flight": {
+        "infantry": 40,
+        "cavalry": 40,
+        "artillery": 40
+      }
+    },
+    "modifiers": {
+      "lightCavalryVsInfantryInForest": -35,
+      "lightCavalryVsInfantryInBushes": -20,
+      "otherCavalryVsInfantryInBushes": -30,
+      "heavyCavalryVsLightCavalry": -15,
+      "infantryCasualtiesReductionInVillage": 20,
+      "lancerCavalryVsOtherCavalry": -20,
+      "lancerCavalryLineVsInfantryException": 200,
+      "cavalryVsInfantryOrArtilleryInEntrenchment": -80,
+      "infantryVsInfantryOrArtilleryInEntrenchment": -60,
+      "higherTerrainEffectivenessBonus": 10
+    },
+    "skirmishToColumnChanceFormula": "(EF * 10) - 30"
+  },
+  "morale": {
+    "baseCheckPercentFormula": "50 + (EF * 5)",
+    "armyMoralePenaltyDivisorPercent": 20,
+    "commanderLineOfSightBonusEf": 1,
+    "beforeAttackModifiers": [
+      {
+        "attacker": "infantry",
+        "defender": "infantry",
+        "modifierPercent": 0
+      },
+      {
+        "attacker": "infantry",
+        "defender": "cavalry",
+        "modifierPercent": -20
+      },
+      {
+        "attacker": "infantry",
+        "defender": "artillery",
+        "modifierPercent": -10
+      },
+      {
+        "attacker": "cavalry",
+        "defender": "infantry",
+        "modifierPercent": 0,
+        "note": "followed by square check"
+      },
+      {
+        "attacker": "cavalry",
+        "defender": "cavalry",
+        "modifierPercent": 0
+      },
+      {
+        "attacker": "cavalry",
+        "defender": "artillery",
+        "modifierPercent": 0
+      }
+    ],
+    "squareChecks": {
+      "infantryFormSquareAgainstCavalryModifierPercent": -10,
+      "cavalryPenetrateSquareModifierPercent": -35
+    },
+    "highLossModifiers": [
+      {
+        "lossPercent": "2.5",
+        "modifierPercent": 0
+      },
+      {
+        "lossPercent": "5-10",
+        "modifierPercent": -10
+      },
+      {
+        "lossPercent": ">10",
+        "modifierPercent": -20
+      }
+    ],
+    "commanderDeathModifierPercent": -10,
+    "reformAfterFlightModifierPercent": -60
+  },
+  "victory": {
+    "captureStrategicPoints": {
+      "ownRequired": 2,
+      "enemyRequired": 2
+    },
+    "moraleDefeatThresholdPercentHigher": 40,
+    "dropoutLevelFormula": "(totalEFDroppedOutFederations) / (totalEFAtBattleStart)"
+  },
+  "generatedAt": "2026-10-15T20:31:34.248Z"
+}

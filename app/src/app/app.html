@@ -15,7 +15,8 @@
   }
 
   @if (parsedTurn && header) {
-    <section class="sheet-head">
+    <section class="sheet-head" [class.show-deploy]="sheetView === 'deploy'">
+      <p class="deploy-line">{{ selectedDeploymentSummary() }} {{ selectedMainTerrain() }}</p>
       <div class="sheet-fields">
         <span>State:</span>
         <span class="sheet-value">{{ header.state }}</span>
@@ -74,6 +75,14 @@
         }
         <div class="load-under-fortress">
           <button type="button" (click)="turnFile.click()">Load New</button>
+          <label class="view-toggle">
+            <input type="radio" name="sheetView" value="header" [(ngModel)]="sheetView" />
+            Header
+          </label>
+          <label class="view-toggle">
+            <input type="radio" name="sheetView" value="deploy" [(ngModel)]="sheetView" />
+            Deploy
+          </label>
           @if (loading) {
             <span class="muted">Parsing...</span>
           }
@@ -86,8 +95,8 @@
     <section class="map panel">
       <div class="map-heading">
         <h2>The Battle field</h2>
-        <p class="map-caption">{{ mapCaption() }}</p>
       </div>
+      <p class="battle-brief-line">{{ battleBriefLine() }}</p>
       <div class="map-grid">
         <div class="axis corner"></div>
         @for (column of columnNumbers; track column) {
@@ -99,7 +108,7 @@
             <div
               class="cell"
               [style.background-color]="heightColor(cell.height)"
-              [style.box-shadow]="zoneShadow(cell)"
+              [style.box-shadow]="cellShadow(cell)"
             >
               <span class="glyph" [class.light]="glyphIsLight(cell.height)">{{ cellLabel(cell) }}</span>
             </div>

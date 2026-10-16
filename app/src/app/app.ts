@@ -415,6 +415,14 @@ export class App {
   }
 
   protected onZoneEdge(cell: MapCell, edge: 'n' | 's' | 'w' | 'e'): boolean {
+    const onMapEdge =
+      (edge === 'n' && cell.y === 1) ||
+      (edge === 's' && cell.y === this.mapHeight) ||
+      (edge === 'w' && cell.x === 1) ||
+      (edge === 'e' && cell.x === this.mapWidth);
+    if (onMapEdge) {
+      return false;
+    }
     for (const zone of Object.values(this.setupZones)) {
       if (cell.x < zone.minX || cell.x > zone.maxX || cell.y < zone.minY || cell.y > zone.maxY) {
         continue;
@@ -457,15 +465,14 @@ export class App {
     return `Main Terrain: ${this.parsedTurn?.battleBrief.mainTerrain ?? ''}`;
   }
 
-  protected battleBriefLine(): string {
+  protected opponentArmyLabel(): string {
     const brief = this.parsedTurn?.battleBrief;
-    if (!brief) {
-      return 'Opponents: unknown. Battlefield coordinates: unknown. A: unknown. B: unknown.';
-    }
-
-    const sideAText = this.battleSideSummary(brief.deploymentAreaA.name, brief.deploymentAreaA.maxFederations);
-    const sideBText = this.battleSideSummary(brief.deploymentAreaB.name, brief.deploymentAreaB.maxFederations);
-    return `Opponents: ${brief.opponents ?? 'unknown'}. Battlefield coordinates: ${brief.battlefieldCoordinates ?? 'unknown'}. A: ${sideAText}. B: ${sideBText}.`;
+    const selected = this.selectedArmySide ?? (this.header?.army === 'Army B' ? 'B' : 'A');
+    const opponentSide = selected === 'A' ? 'B' : 'A';
+    const opponent = opponentSide === 'A' ? brief?.deploymentAreaA : brief?.deploymentAreaB;
+    const name = opponent?.name ?? 'unknown';
+    const count = opponent?.maxFederations ?? 'unknown';
+    return `Army ${opponentSide}: ${name} (${count} Federations)`;
   }
 
   protected toggleMapZoom(): void {
@@ -820,10 +827,6 @@ export class App {
       return 'inset 0 0 0 4px #3d8bff';
     }
     return '';
-  }
-
-  private battleSideSummary(name: string | null, maxFederations: number | null): string {
-    return `${name ?? 'unknown'}, ${maxFederations ?? 'unknown'} federations`;
   }
 
   private emptyFortressEntrenchments(): Array<{ x: number | null; y: number | null }> {

@@ -1,4 +1,4 @@
-<main class="app-shell">
+<main class="app-shell" [class.zoomed]="isMapZoomed()" [style.--cols]="visibleColumns().length">
   @if (missingSimWarning) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="File not found">
@@ -45,6 +45,7 @@
 
   @if (!(parsedTurn && header)) {
     <div class="load-row">
+      <h1 class="app-title">Austerlitz Simulated Battle Planner</h1>
       <button type="button" (click)="turnFile.click()">Load New Turn</button>
       @if (loading) {
         <span class="muted">Parsing...</span>
@@ -64,44 +65,65 @@
             <option [ngValue]="'Army A'">{{ armyChoiceLabel('Army A') }}</option>
             <option [ngValue]="'Army B'">{{ armyChoiceLabel('Army B') }}</option>
           </select>
+          <span class="opponent-army">{{ opponentArmyLabel() }}</span>
         </label>
-        <button type="button" (click)="turnFile.click()">Load New Turn</button>
-        @if (selectedArmy && parsedTurn.armies.length) {
-          <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
-            {{ exporting ? 'Saving...' : 'Save SIM' }}
-          </button>
-          <button type="button" [disabled]="loadingSim || !header" (click)="loadMatchingSim()">
-            {{ loadingSim ? 'Loading...' : 'Load SIM' }}
-          </button>
-        }
-        @if (loading) {
-          <span class="muted">Parsing...</span>
-        }
-        <span class="sheet-meta">
-          <span>{{ deploymentAreaLabel() }}</span>
-          <span>{{ mainTerrainLabel() }}</span>
-        </span>
+        <h1 class="app-title">Austerlitz Simulated Battle Planner</h1>
+        <div class="bar-actions">
+          <button type="button" (click)="turnFile.click()">Load New Turn</button>
+          @if (selectedArmy && parsedTurn.armies.length) {
+            <button type="button" class="paired-action" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
+              {{ exporting ? 'Saving...' : 'Save SIM' }}
+            </button>
+            <button type="button" class="paired-action" [disabled]="loadingSim || !header" (click)="loadMatchingSim()">
+              {{ loadingSim ? 'Loading...' : 'Load SIM' }}
+            </button>
+          }
+          @if (loading) {
+            <span class="muted">Parsing...</span>
+          }
+        </div>
       </div>
       <div class="deploy-palette panel" [class.zoomed]="isMapZoomed()" (drop)="onTrayDrop($event)" (dragover)="onTrayDragOver($event)">
         <div class="deploy-heading">
-          <div class="view-switch" role="group" aria-label="Sheet view">
-            <button type="button" class="view-title" [class.active]="sheetView === 'header'" (click)="sheetView = 'header'">Header</button>
-            <button type="button" class="view-title" [class.active]="sheetView === 'deploy'" (click)="sheetView = 'deploy'">Deploy</button>
+          <div class="view-switch" role="tablist" aria-label="Sheet view">
+            <button
+              type="button"
+              id="header-tab"
+              class="view-tab"
+              role="tab"
+              [class.active]="sheetView === 'header'"
+              [attr.aria-selected]="sheetView === 'header'"
+              aria-controls="header-panel"
+              (click)="sheetView = 'header'"
+            >Header</button>
+            <button
+              type="button"
+              id="deploy-tab"
+              class="view-tab"
+              role="tab"
+              [class.active]="sheetView === 'deploy'"
+              [attr.aria-selected]="sheetView === 'deploy'"
+              aria-controls="deploy-panel"
+              (click)="sheetView = 'deploy'"
+            >Deploy</button>
           </div>
-          @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
+          @if (selectedArmy && parsedTurn.armies.length) {
             <button
               type="button"
               class="info-tip"
-              title="Drag federation chips onto your setup zone on The Battle field map."
-              aria-label="Drag federation chips onto your setup zone on The Battle field map."
+              title="Drag federation chips onto your setup zone on The Battle field map. Right-click to remove a deployed federation. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
+              aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click to remove a deployed federation. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
             >i</button>
-            <button type="button" (click)="toggleMapZoom()">{{ mapZoomed ? 'Zoom-Out' : 'Zoom-In' }}</button>
-            <button type="button" (click)="askClearAll()">Clear All</button>
-            <span class="placement-stats">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
+          }
+          @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
+            <div class="deploy-tools">
+              <button type="button" class="paired-action" (click)="toggleMapZoom()">{{ mapZoomed ? 'Zoom-Out' : 'Zoom-In' }}</button>
+              <button type="button" class="paired-action" (click)="askClearAll()">Clear All</button>
+            </div>
           }
         </div>
         @if (sheetView === 'header') {
-          <div class="sheet-fields">
+          <div id="header-panel" class="sheet-fields" role="tabpanel" aria-labelledby="header-tab">
             <span>State:</span>
             <span class="sheet-value">{{ header.state }}</span>
             <span>Game:</span>
@@ -160,7 +182,7 @@
           </div>
         }
         @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
-          <div class="palette-grid">
+          <div id="deploy-panel" class="palette-grid" role="tabpanel" aria-labelledby="deploy-tab">
             @for (unit of getUnplacedUnits(); track unit.id) {
               <div
                 class="unit-card own"
@@ -193,12 +215,18 @@
     <section class="map panel">
       <div class="map-heading">
         <h2>The Battle field</h2>
-        <p class="battle-brief-line">{{ battleBriefLine() }}</p>
+        @if (selectedArmy && parsedTurn?.armies?.length) {
+          <span class="sheet-meta map-placed">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
+        }
+        <span class="sheet-meta">
+          <span>{{ deploymentAreaLabel() }}</span>
+          <span>{{ mainTerrainLabel() }}</span>
+        </span>
       </div>
       <div
         class="map-grid"
         [class.zoomed]="isMapZoomed()"
-        [style.grid-template-columns]="'22px repeat(' + visibleColumns().length + ', ' + (isMapZoomed() ? '49.5px' : '33px') + ')'"
+        [style.grid-template-columns]="'var(--axis-w) repeat(' + visibleColumns().length + ', var(--cell-w))'"
       >
         <div class="axis corner"></div>
         @for (column of visibleColumns(); track column) {

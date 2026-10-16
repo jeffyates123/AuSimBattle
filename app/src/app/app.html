@@ -117,6 +117,9 @@
           }
           @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
             <div class="deploy-tools">
+              <button type="button" class="paired-action" (click)="toggleFedsHidden()">
+                {{ fedsHidden ? 'Show Feds' : 'Hide Feds' }}
+              </button>
               <button type="button" class="paired-action" (click)="toggleMapZoom()">{{ mapZoomed ? 'Zoom-Out' : 'Zoom-In' }}</button>
               <button type="button" class="paired-action" (click)="askClearAll()">Clear All</button>
             </div>

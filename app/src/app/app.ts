@@ -43,6 +43,7 @@ export class App {
   protected statusMessage = '';
   protected sheetView: 'header' | 'deploy' = 'header';
   protected mapZoomed = false;
+  protected fedsHidden = false;
   protected readonly columnNumbers = Array.from({ length: 45 }, (_, index) => index + 1);
   protected readonly fortressRowOne = [1, 2, 3, 4, 5];
   protected readonly fortressRowTwo = [6, 7, 8, 9, 10];
@@ -380,6 +381,9 @@ export class App {
   }
 
   protected getOccupant(x: number, y: number): { unit: FederationUnit; kind: 'own' | 'enemy' } | null {
+    if (this.fedsHidden) {
+      return null;
+    }
     const own = this.ownByCoord.get(this.coordKey(x, y));
     if (own) {
       return { kind: 'own', unit: own };
@@ -477,6 +481,10 @@ export class App {
 
   protected toggleMapZoom(): void {
     this.mapZoomed = !this.mapZoomed;
+  }
+
+  protected toggleFedsHidden(): void {
+    this.fedsHidden = !this.fedsHidden;
   }
 
   protected isMapZoomed(): boolean {

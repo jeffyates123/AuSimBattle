@@ -39,6 +39,7 @@ export class App {
   protected missingSimWarning: string | null = null;
   protected savePrompt: { fileName: string; nextName: string } | null = null;
   protected simFileChoices: string[] | null = null;
+  protected clearAllPrompt = false;
   protected statusMessage = '';
   protected sheetView: 'header' | 'deploy' = 'header';
   protected mapZoomed = false;
@@ -60,8 +61,8 @@ export class App {
   protected loadingSim = false;
   protected placements = new Map<number, Coordinate>();
   protected highlightedFederationId: number | null = null;
-  private pendingPlaceTimer = 0;
   private lastDropAt = 0;
+  private armedClickAt = 0;
   private lastPaletteDragAt = 0;
   protected rows: MapCell[][] = [];
   protected ownByCoord = new Map<string, FederationUnit>();
@@ -146,7 +147,6 @@ export class App {
 
     this.tryRestoreDraft();
     this.rebuildOccupancyMaps();
-    this.statusMessage = `${own.name} selected. Drag federations to setup coordinates.`;
     this.autoSaveDraft();
   }
 
@@ -188,18 +188,25 @@ export class App {
     }
     const own = this.ownByCoord.get(this.coordKey(x, y));
     if (event.detail >= 2 && own) {
-      window.clearTimeout(this.pendingPlaceTimer);
-      this.returnToPool(own.id);
+      if (performance.now() - this.armedClickAt > 500) {
+        this.returnToPool(own.id);
+      }
       return;
     }
     if (this.highlightedFederationId === null) {
       return;
     }
-    window.clearTimeout(this.pendingPlaceTimer);
-    const unitId = this.highlightedFederationId;
-    this.pendingPlaceTimer = window.setTimeout(() => {
-      this.placeFederation(unitId, x, y);
-    }, 280);
+    this.armedClickAt = performance.now();
+    this.placeFederation(this.highlightedFederationId, x, y);
+  }
+
+  protected onCellContextMenu(event: MouseEvent, x: number, y: number): void {
+    event.preventDefault();
+    const own = this.ownByCoord.get(this.coordKey(x, y));
+    if (!own) {
+      return;
+    }
+    this.returnToPool(own.id);
   }
 
   protected onTrayDrop(event: DragEvent): void {
@@ -435,18 +442,19 @@ export class App {
     return shadows.join(', ');
   }
 
-  protected selectedDeploymentSummary(): string {
+  protected armyChoiceLabel(army: 'Army A' | 'Army B'): string {
     const brief = this.parsedTurn?.battleBrief;
-    if (!brief || !this.selectedArmySide) {
-      return 'Deployment area A, unknown Federations (Maximum): unknown';
-    }
-    const area = this.selectedArmySide === 'A' ? brief.deploymentAreaA : brief.deploymentAreaB;
-    return `Deployment area ${this.selectedArmySide}, ${area.maxFederations ?? 'unknown'} Federations (Maximum): ${area.name ?? 'unknown'}`;
+    const name = army === 'Army A' ? brief?.deploymentAreaA.name : brief?.deploymentAreaB.name;
+    return name ? `${army} : ${name}` : army;
   }
 
-  protected selectedMainTerrain(): string {
-    const terrain = this.parsedTurn?.battleBrief.mainTerrain ?? 'unknown';
-    return `Main terrain: ${terrain}`;
+  protected deploymentAreaLabel(): string {
+    const side = this.selectedArmySide ?? (this.header?.army === 'Army B' ? 'B' : 'A');
+    return `Deployment Area: ${side}`;
+  }
+
+  protected mainTerrainLabel(): string {
+    return `Main Terrain: ${this.parsedTurn?.battleBrief.mainTerrain ?? ''}`;
   }
 
   protected battleBriefLine(): string {
@@ -567,6 +575,19 @@ export class App {
     this.autoSaveDraft();
     const skippedText = skipped > 0 ? ` ${skipped} rows were skipped.` : '';
     this.statusMessage = `Loaded ${this.placements.size} federations from ${fileName}.${skippedText}`;
+  }
+
+  protected askClearAll(): void {
+    this.clearAllPrompt = true;
+  }
+
+  protected confirmClearAll(): void {
+    this.clearAllPrompt = false;
+    this.placements.clear();
+    this.highlightedFederationId = null;
+    this.rebuildOccupancyMaps();
+    this.statusMessage = 'All federations moved back to tray.';
+    this.autoSaveDraft();
   }
 
   private returnToPool(unitId: number): void {

@@ -30,6 +30,17 @@
       </div>
     </div>
   }
+  @if (clearAllPrompt) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="alertdialog" aria-label="Clear all federations">
+        <p>Are you sure you want to clear all federations from the battlefield?</p>
+        <div class="warning-actions">
+          <button type="button" (click)="confirmClearAll()">Clear All</button>
+          <button type="button" (click)="clearAllPrompt = false">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
   <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
 
   @if (!(parsedTurn && header)) {
@@ -47,105 +58,108 @@
 
   @if (parsedTurn && header) {
     <section class="sheet-head" [class.show-deploy]="sheetView === 'deploy'">
-      <p class="deploy-line">{{ selectedDeploymentSummary() }} {{ selectedMainTerrain() }}</p>
-      <div class="sheet-fields">
-        <span>State:</span>
-        <span class="sheet-value">{{ header.state }}</span>
-        <span>Game:</span>
-        <span class="sheet-value">{{ header.gameId }}</span>
-        <span class="label-with-slot">SimNumber</span>
-        <span class="sheet-value">{{ header.simulationNumber }}</span>
-        <span class="label-with-slot general-label">General Federation</span>
-        <span class="value-slot">
-          <span class="sheet-value">
-            <input type="number" min="1" max="180" [(ngModel)]="header.generalFederation" (change)="saveDraftNow()" />
-          </span>
-          @if (header.generalFederation) {
-            <span class="valid-flag">Valid</span>
+      <div class="load-under-fortress">
+        <label class="army-quick-select">
+          <select [ngModel]="header.army" (ngModelChange)="onArmySelected($event)">
+            <option [ngValue]="'Army A'">{{ armyChoiceLabel('Army A') }}</option>
+            <option [ngValue]="'Army B'">{{ armyChoiceLabel('Army B') }}</option>
+          </select>
+        </label>
+        <button type="button" (click)="turnFile.click()">Load New Turn</button>
+        @if (selectedArmy && parsedTurn.armies.length) {
+          <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
+            {{ exporting ? 'Saving...' : 'Save SIM' }}
+          </button>
+          <button type="button" [disabled]="loadingSim || !header" (click)="loadMatchingSim()">
+            {{ loadingSim ? 'Loading...' : 'Load SIM' }}
+          </button>
+        }
+        @if (loading) {
+          <span class="muted">Parsing...</span>
+        }
+        <span class="sheet-meta">
+          <span>{{ deploymentAreaLabel() }}</span>
+          <span>{{ mainTerrainLabel() }}</span>
+        </span>
+      </div>
+      <div class="deploy-palette panel" [class.zoomed]="isMapZoomed()" (drop)="onTrayDrop($event)" (dragover)="onTrayDragOver($event)">
+        <div class="deploy-heading">
+          <div class="view-switch" role="group" aria-label="Sheet view">
+            <button type="button" class="view-title" [class.active]="sheetView === 'header'" (click)="sheetView = 'header'">Header</button>
+            <button type="button" class="view-title" [class.active]="sheetView === 'deploy'" (click)="sheetView = 'deploy'">Deploy</button>
+          </div>
+          @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
+            <button
+              type="button"
+              class="info-tip"
+              title="Drag federation chips onto your setup zone on The Battle field map."
+              aria-label="Drag federation chips onto your setup zone on The Battle field map."
+            >i</button>
+            <button type="button" (click)="toggleMapZoom()">{{ mapZoomed ? 'Zoom-Out' : 'Zoom-In' }}</button>
+            <button type="button" (click)="askClearAll()">Clear All</button>
+            <span class="placement-stats">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
           }
-        </span>
+        </div>
+        @if (sheetView === 'header') {
+          <div class="sheet-fields">
+            <span>State:</span>
+            <span class="sheet-value">{{ header.state }}</span>
+            <span>Game:</span>
+            <span class="sheet-value">{{ header.gameId }}</span>
+            <span class="label-with-slot">SimNumber</span>
+            <span class="sheet-value">{{ header.simulationNumber }}</span>
+            <span class="label-with-slot general-label">General Federation</span>
+            <span class="value-slot">
+              <span class="sheet-value">
+                <input type="number" min="1" max="180" [(ngModel)]="header.generalFederation" (change)="saveDraftNow()" />
+              </span>
+              @if (header.generalFederation) {
+                <span class="valid-flag">Valid</span>
+              }
+            </span>
 
-        <span>Account:</span>
-        <span class="sheet-value">{{ header.accountId }}</span>
-        <span>Player:</span>
-        <span class="sheet-value">{{ header.playerName?.toUpperCase() }}</span>
-        <span class="label-with-slot">Process Date</span>
-        <span class="sheet-value">
-          <input type="date" [(ngModel)]="header.processDate" (change)="saveDraftNow()" />
-        </span>
-        <span class="label-with-slot">Army A or Army B?</span>
-        <span class="value-slot">
-          <span class="sheet-value">
-            <select [ngModel]="header.army" (ngModelChange)="onArmySelected($event)">
-              <option [ngValue]="'Army A'">Army A</option>
-              <option [ngValue]="'Army B'">Army B</option>
-            </select>
-          </span>
-        </span>
+            <span>Account:</span>
+            <span class="sheet-value">{{ header.accountId }}</span>
+            <span>Player:</span>
+            <span class="sheet-value">{{ header.playerName?.toUpperCase() }}</span>
+            <span class="label-with-slot">Process Date</span>
+            <span class="sheet-value">
+              <input type="date" [(ngModel)]="header.processDate" (change)="saveDraftNow()" />
+            </span>
+            <span class="label-with-slot">Army A or Army B?</span>
+            <span class="value-slot">
+              <span class="sheet-value">
+                <select [ngModel]="header.army" (ngModelChange)="onArmySelected($event)">
+                  <option [ngValue]="'Army A'">{{ armyChoiceLabel('Army A') }}</option>
+                  <option [ngValue]="'Army B'">{{ armyChoiceLabel('Army B') }}</option>
+                </select>
+              </span>
+            </span>
 
-        <span class="fortress-label">Fortress Entrenchments:</span>
-        @for (row of fortressRows; track $index) {
-          <div class="fortress-span" [class.bottom]="$index === 1">
-            @for (slot of row; track slot) {
-              <label
-                class="entrenchment"
-                [class.anchor]="isAnchored(slot)"
-                [class.between]="!isAnchored(slot)"
-                [style.grid-column]="entrenchmentColumn(slot)"
-              >
-                <span class="slot-label">{{ slot }} <span class="slot-colon" aria-hidden="true">:</span></span>
-                <span class="sheet-value coord">
-                  <input type="number" min="1" max="45" [(ngModel)]="fortressEntrenchments[slot - 1].x" />
-                </span>
-                <span class="sheet-value coord">
-                  <input type="number" min="1" max="40" [(ngModel)]="fortressEntrenchments[slot - 1].y" />
-                </span>
-              </label>
+            <span class="fortress-label">Fortress Entrenchments:</span>
+            @for (row of fortressRows; track $index) {
+              <div class="fortress-span" [class.bottom]="$index === 1">
+                @for (slot of row; track slot) {
+                  <label
+                    class="entrenchment"
+                    [class.anchor]="isAnchored(slot)"
+                    [class.between]="!isAnchored(slot)"
+                    [style.grid-column]="entrenchmentColumn(slot)"
+                  >
+                    <span class="slot-label">{{ slot }} <span class="slot-colon" aria-hidden="true">:</span></span>
+                    <span class="sheet-value coord">
+                      <input type="number" min="1" max="45" [(ngModel)]="fortressEntrenchments[slot - 1].x" />
+                    </span>
+                    <span class="sheet-value coord">
+                      <input type="number" min="1" max="40" [(ngModel)]="fortressEntrenchments[slot - 1].y" />
+                    </span>
+                  </label>
+                }
+              </div>
             }
           </div>
         }
-        <div class="load-under-fortress">
-          <button type="button" (click)="turnFile.click()">Load New Turn</button>
-          <label class="view-toggle">
-            <input type="radio" name="sheetView" value="header" [(ngModel)]="sheetView" />
-            Header
-          </label>
-          <label class="view-toggle">
-            <input type="radio" name="sheetView" value="deploy" [(ngModel)]="sheetView" />
-            Deploy
-          </label>
-          @if (sheetView === 'deploy') {
-            <label class="army-quick-select">
-              Army:
-              <select [ngModel]="header.army" (ngModelChange)="onArmySelected($event)">
-                <option [ngValue]="'Army A'">Army A</option>
-                <option [ngValue]="'Army B'">Army B</option>
-              </select>
-            </label>
-          }
-          @if (selectedArmy && parsedTurn.armies.length) {
-            <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
-              {{ exporting ? 'Saving...' : 'Save SIM' }}
-            </button>
-            <button type="button" [disabled]="loadingSim || !header" (click)="loadMatchingSim()">
-              {{ loadingSim ? 'Loading...' : 'Load SIM' }}
-            </button>
-          }
-          @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
-            <span class="placement-stats">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
-          }
-          @if (loading) {
-            <span class="muted">Parsing...</span>
-          }
-        </div>
-      </div>
-      @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
-        <div class="deploy-palette panel" [class.zoomed]="isMapZoomed()" (drop)="onTrayDrop($event)" (dragover)="onTrayDragOver($event)">
-          <div class="deploy-heading">
-            <h2>Deploy</h2>
-            <button type="button" (click)="toggleMapZoom()">{{ mapZoomed ? 'Zoom-Out' : 'Zoom-In' }}</button>
-          </div>
-          <p class="muted">Drag federation chips onto your setup zone on The Battle field map.</p>
+        @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
           <div class="palette-grid">
             @for (unit of getUnplacedUnits(); track unit.id) {
               <div
@@ -167,8 +181,8 @@
               </div>
             }
           </div>
-        </div>
-      }
+        }
+      </div>
       @if (sheetView === 'deploy' && exportError) {
         <p class="error">{{ exportError }}</p>
       }
@@ -179,8 +193,8 @@
     <section class="map panel">
       <div class="map-heading">
         <h2>The Battle field</h2>
+        <p class="battle-brief-line">{{ battleBriefLine() }}</p>
       </div>
-      <p class="battle-brief-line">{{ battleBriefLine() }}</p>
       <div
         class="map-grid"
         [class.zoomed]="isMapZoomed()"
@@ -204,6 +218,7 @@
               (dragover)="onCellDragOver($event)"
               (drop)="onCellDrop($event, cell.x, cell.y)"
               (click)="onCellClick($event, cell.x, cell.y)"
+              (contextmenu)="onCellContextMenu($event, cell.x, cell.y)"
             >
               @if (getOccupant(cell.x, cell.y); as occupant) {
                 <div

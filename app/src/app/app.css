@@ -19,13 +19,23 @@
 }
 
 .load-under-fortress {
-  grid-column: 1 / -1;
-  justify-self: start;
+  justify-self: stretch;
   align-self: center;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  width: 100%;
+}
+
+.sheet-meta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  font-weight: 700;
+  color: #d7e6ff;
+  white-space: nowrap;
 }
 
 .sheet-head {
@@ -39,37 +49,6 @@
   gap: 10px;
   width: max-content;
   max-width: 100%;
-}
-
-.view-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.view-toggle input {
-  accent-color: #76a3ff;
-}
-
-.deploy-line {
-  display: none;
-  margin: 0;
-  white-space: normal;
-  font-weight: 700;
-  color: #d7e6ff;
-}
-
-.sheet-head.show-deploy .sheet-fields > :not(.load-under-fortress) {
-  display: none;
-}
-
-.sheet-head.show-deploy .sheet-fields {
-  display: flex;
-}
-
-.sheet-head.show-deploy .deploy-line {
-  display: block;
 }
 
 .sheet-fields {
@@ -306,12 +285,27 @@ input[type='date'] {
   margin: 0 0 6px;
 }
 
-.deploy-heading h2 {
-  margin: 0;
+.view-switch {
+  display: inline-flex;
+  gap: 6px;
 }
 
-.deploy-palette .muted {
-  margin: 0 0 8px;
+.view-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 4px 16px;
+}
+
+.info-tip {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .palette-grid {
@@ -329,23 +323,27 @@ input[type='date'] {
 .map-heading {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: 16px;
   margin: 0 0 8px;
+  width: 100%;
 }
 
 .map-heading h2 {
   margin: 0;
+  white-space: nowrap;
 }
 
 .battle-brief-line {
-  margin: 0 0 8px;
+  margin: 0 0 0 auto;
   color: #b9d9ff;
   font-size: 0.85rem;
+  text-align: right;
 }
 
 .map-grid {
   display: grid;
-  gap: 1px;
+  gap: 0;
   background: #0f1723;
   width: max-content;
   border: 1px solid #44546d;
@@ -384,6 +382,9 @@ input[type='date'] {
   position: relative;
   display: grid;
   place-items: center;
+  box-sizing: border-box;
+  border-right: 1px solid #0f1723;
+  border-bottom: 1px solid #0f1723;
 }
 
 .glyph {
@@ -417,6 +418,7 @@ input[type='date'] {
 
 .cell.zone-s::after {
   border-bottom-width: 2px;
+  bottom: -1px;
 }
 
 .cell.zone-w::after {
@@ -425,6 +427,7 @@ input[type='date'] {
 
 .cell.zone-e::after {
   border-right-width: 2px;
+  right: -1px;
 }
 
 .feature-open {

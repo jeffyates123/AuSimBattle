@@ -22,6 +22,49 @@ describe('ExcelExportService.readSetup', () => {
         army: null,
       }),
     ).toBe('SIM Sheet v0.6-Denmark Sim 201.xlsx');
+    expect(
+      service.fileName(
+        {
+          state: 'Denmark',
+          accountId: null,
+          gameId: null,
+          playerName: null,
+          simulationNumber: 201,
+          processDate: null,
+          generalFederation: null,
+          validationStatus: null,
+          army: null,
+        },
+        2,
+      ),
+    ).toBe('SIM Sheet v0.6-Denmark Sim 201_2.xlsx');
+  });
+
+  it('treats a saved version as a match when the server does not have it', async () => {
+    const header = {
+      state: 'Denmark',
+      accountId: null,
+      gameId: null,
+      playerName: null,
+      simulationNumber: 201,
+      processDate: null,
+      generalFederation: null,
+      validationStatus: null,
+      army: null,
+    } as const;
+    const version = service.fileName(header, 1);
+    service.rememberWorkbook(version, new Uint8Array([1, 2, 3]).buffer);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(null, { status: 404 })) as typeof fetch;
+    try {
+      await expect(service.matchingFileNames(header)).resolves.toEqual([version]);
+      expect(new Uint8Array(service.readSavedWorkbook(version) ?? new ArrayBuffer(0))).toEqual(
+        new Uint8Array([1, 2, 3]),
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+      localStorage.removeItem(`ausim.simsheet.${version}`);
+    }
   });
 
   it('reads army, general federation, and start coordinates', async () => {
@@ -99,10 +142,18 @@ describe('ExcelExportService.readSetup', () => {
     const processDate = sheet?.getCell('L4').value;
     expect(processDate).toBeInstanceOf(Date);
     expect((processDate as Date).toISOString()).toBe('2026-02-17T00:00:00.000Z');
-    expect(sheet?.getCell('L4').numFmt).toBe('yyyy-mm-dd');
+    expect(sheet?.getCell('L4').numFmt).toBe('mm-dd-yy');
     expect((await service.readSetup(filled)).processDate).toBe('2026-02-17');
-    const styles = await JSZip.loadAsync(filled).then((zip) => zip.file('xl/styles.xml')?.async('string'));
-    expect(styles).toContain('Sheet1-style');
-    expect(styles).toContain('FFEEF7E3');
+    const filledZip = await JSZip.loadAsync(filled);
+    const styles = await filledZip.file('xl/styles.xml')?.async('string');
+    const templateStyles = await JSZip.loadAsync(template).then((zip) => zip.file('xl/styles.xml')?.async('string'));
+    const filledSheet = await filledZip.file('xl/worksheets/sheet1.xml')?.async('string');
+    expect(styles).toBe(templateStyles);
+    expect(filledSheet).toContain('<c r="C3" s="53" t="inlineStr">');
+    expect(filledSheet).toContain('<c r="D13" s="37"><v>11</v></c>');
+    expect(filledSheet).toMatch(/<c r="D68" s="\d+"><v>20<\/v><\/c>/);
+    const filledTable = await filledZip.file('xl/tables/table1.xml')?.async('string');
+    const templateTable = await JSZip.loadAsync(template).then((zip) => zip.file('xl/tables/table1.xml')?.async('string'));
+    expect(filledTable).toBe(templateTable);
   });
 });

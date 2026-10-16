@@ -37,6 +37,8 @@ export class App {
   protected parseError = '';
   protected exportError = '';
   protected missingSimWarning: string | null = null;
+  protected savePrompt: { fileName: string; nextName: string } | null = null;
+  protected simFileChoices: string[] | null = null;
   protected statusMessage = '';
   protected sheetView: 'header' | 'deploy' = 'header';
   protected mapZoomed = false;
@@ -58,6 +60,7 @@ export class App {
   protected loadingSim = false;
   protected placements = new Map<number, Coordinate>();
   protected highlightedFederationId: number | null = null;
+  private pendingPlaceTimer = 0;
   private lastDropAt = 0;
   private lastPaletteDragAt = 0;
   protected rows: MapCell[][] = [];
@@ -179,26 +182,30 @@ export class App {
     this.placeFederation(unitId, x, y);
   }
 
-  protected onCellClick(x: number, y: number): void {
+  protected onCellClick(event: MouseEvent, x: number, y: number): void {
     if (performance.now() - this.lastDropAt < 400) {
+      return;
+    }
+    const own = this.ownByCoord.get(this.coordKey(x, y));
+    if (event.detail >= 2 && own) {
+      window.clearTimeout(this.pendingPlaceTimer);
+      this.returnToPool(own.id);
       return;
     }
     if (this.highlightedFederationId === null) {
       return;
     }
-    this.placeFederation(this.highlightedFederationId, x, y);
+    window.clearTimeout(this.pendingPlaceTimer);
+    const unitId = this.highlightedFederationId;
+    this.pendingPlaceTimer = window.setTimeout(() => {
+      this.placeFederation(unitId, x, y);
+    }, 280);
   }
 
   protected onTrayDrop(event: DragEvent): void {
     event.preventDefault();
     const unitId = Number(event.dataTransfer?.getData('text/plain') ?? '');
-    if (!unitId || !this.placements.has(unitId)) {
-      return;
-    }
-    this.placements.delete(unitId);
-    this.rebuildOccupancyMaps();
-    this.statusMessage = `Federation ${unitId} moved back to tray.`;
-    this.autoSaveDraft();
+    this.returnToPool(unitId);
   }
 
   protected onTrayDragOver(event: DragEvent): void {
@@ -238,14 +245,34 @@ export class App {
     }
     this.exporting = true;
     this.exportError = '';
+    this.missingSimWarning = null;
+    this.simFileChoices = null;
     try {
-      await this.excelExport.exportSetup(
-        this.header,
-        this.selectedArmySide,
-        this.placements,
-        this.fortressEntrenchments,
-      );
-      this.statusMessage = 'SIM sheet saved.';
+      const existing = await this.excelExport.matchingFileNames(this.header);
+      const fileName = this.excelExport.fileName(this.header);
+      if (existing.includes(fileName)) {
+        this.savePrompt = { fileName, nextName: this.excelExport.fileName(this.header, this.nextVersion(existing)) };
+        return;
+      }
+      await this.writeSimSheet(fileName);
+    } catch (error) {
+      this.exportError = error instanceof Error ? error.message : 'Failed to export sheet.';
+    } finally {
+      this.exporting = false;
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  protected async confirmSave(choice: 'overwrite' | 'version'): Promise<void> {
+    if (!this.savePrompt || !this.selectedArmy || !this.selectedArmySide || !this.header) {
+      return;
+    }
+    const fileName = choice === 'overwrite' ? this.savePrompt.fileName : this.savePrompt.nextName;
+    this.savePrompt = null;
+    this.exporting = true;
+    this.exportError = '';
+    try {
+      await this.writeSimSheet(fileName);
     } catch (error) {
       this.exportError = error instanceof Error ? error.message : 'Failed to export sheet.';
     } finally {
@@ -260,27 +287,84 @@ export class App {
       return;
     }
 
-    const fileName = this.excelExport.fileName(this.header);
     this.loadingSim = true;
     this.exportError = '';
     this.missingSimWarning = null;
+    this.savePrompt = null;
     try {
-      const response = await fetch(`sim-sheets/${encodeURIComponent(fileName)}`);
-      const buffer = response.ok ? await response.arrayBuffer() : null;
-      const signature = buffer ? new Uint8Array(buffer, 0, 2) : null;
-      const isWorkbook = signature !== null && signature[0] === 0x50 && signature[1] === 0x4b;
-      if (!isWorkbook || !buffer) {
-        this.missingSimWarning = fileName;
+      const names = await this.excelExport.matchingFileNames(this.header);
+      if (names.length === 0) {
+        this.missingSimWarning = this.excelExport.fileName(this.header);
         return;
       }
-      const setup = await this.excelExport.readSetup(buffer);
-      this.applySimSheet(setup, fileName);
+      if (names.length === 1) {
+        await this.readSimFile(names[0]);
+        return;
+      }
+      this.simFileChoices = names;
     } catch (error) {
       this.exportError = error instanceof Error ? error.message : 'Unable to read this SIM sheet.';
     } finally {
       this.loadingSim = false;
       this.changeDetector.markForCheck();
     }
+  }
+
+  protected async loadChosenSim(fileName: string): Promise<void> {
+    this.simFileChoices = null;
+    this.loadingSim = true;
+    this.exportError = '';
+    try {
+      await this.readSimFile(fileName);
+    } catch (error) {
+      this.exportError = error instanceof Error ? error.message : 'Unable to read this SIM sheet.';
+    } finally {
+      this.loadingSim = false;
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  private nextVersion(existing: string[]): number {
+    let version = 1;
+    while (this.header && existing.includes(this.excelExport.fileName(this.header, version))) {
+      version += 1;
+    }
+    return version;
+  }
+
+  private async writeSimSheet(fileName: string): Promise<void> {
+    if (!this.selectedArmySide || !this.header) {
+      return;
+    }
+    await this.excelExport.exportSetup(
+      this.header,
+      this.selectedArmySide,
+      this.placements,
+      this.fortressEntrenchments,
+      fileName,
+    );
+    this.statusMessage = `SIM sheet saved as ${fileName}.`;
+  }
+
+  private async readSimFile(fileName: string): Promise<void> {
+    const saved = this.excelExport.readSavedWorkbook(fileName);
+    const buffer = saved ?? (await this.fetchWorkbook(fileName));
+    if (!buffer) {
+      this.missingSimWarning = fileName;
+      return;
+    }
+    const setup = await this.excelExport.readSetup(buffer);
+    this.applySimSheet(setup, fileName);
+  }
+
+  private async fetchWorkbook(fileName: string): Promise<ArrayBuffer | null> {
+    const response = await fetch(`sim-sheets/${encodeURIComponent(fileName)}`);
+    if (!response.ok) {
+      return null;
+    }
+    const buffer = await response.arrayBuffer();
+    const signature = new Uint8Array(buffer, 0, 2);
+    return signature[0] === 0x50 && signature[1] === 0x4b ? buffer : null;
   }
 
   protected saveDraftNow(): void {
@@ -323,30 +407,29 @@ export class App {
     return height >= 6;
   }
 
-  protected zoneShadow(cell: MapCell): string {
-    const shadows: string[] = [];
+  protected onZoneEdge(cell: MapCell, edge: 'n' | 's' | 'w' | 'e'): boolean {
     for (const zone of Object.values(this.setupZones)) {
       if (cell.x < zone.minX || cell.x > zone.maxX || cell.y < zone.minY || cell.y > zone.maxY) {
         continue;
       }
-      if (cell.y === zone.minY) {
-        shadows.push('inset 0 2px 0 #000');
+      if (edge === 'n' && cell.y === zone.minY) {
+        return true;
       }
-      if (cell.y === zone.maxY) {
-        shadows.push('inset 0 -2px 0 #000');
+      if (edge === 's' && cell.y === zone.maxY) {
+        return true;
       }
-      if (cell.x === zone.minX) {
-        shadows.push('inset 2px 0 0 #000');
+      if (edge === 'w' && cell.x === zone.minX) {
+        return true;
       }
-      if (cell.x === zone.maxX) {
-        shadows.push('inset -2px 0 0 #000');
+      if (edge === 'e' && cell.x === zone.maxX) {
+        return true;
       }
     }
-    return shadows.join(', ');
+    return false;
   }
 
   protected cellShadow(cell: MapCell): string {
-    const shadows = [this.zoneShadow(cell), this.specialBorderShadow(cell), this.strategicPointShadow(cell)].filter(
+    const shadows = [this.specialBorderShadow(cell), this.strategicPointShadow(cell)].filter(
       (value) => value.length > 0,
     );
     return shadows.join(', ');
@@ -424,11 +507,13 @@ export class App {
     return this.enemyArmy?.name ?? null;
   }
 
-  protected cellInSelectedZone(x: number, y: number): boolean {
-    if (!this.selectedArmySide) {
+  protected onStrategicPoint(x: number, y: number): boolean {
+    const brief = this.parsedTurn?.battleBrief;
+    if (!brief) {
       return false;
     }
-    return this.inZone({ x, y }, this.setupZones[this.selectedArmySide]);
+    const matches = (point: { x: number; y: number }) => point.x === x && point.y === y;
+    return brief.deploymentAreaA.strategicPoints.some(matches) || brief.deploymentAreaB.strategicPoints.some(matches);
   }
 
   private applySimSheet(
@@ -482,6 +567,16 @@ export class App {
     this.autoSaveDraft();
     const skippedText = skipped > 0 ? ` ${skipped} rows were skipped.` : '';
     this.statusMessage = `Loaded ${this.placements.size} federations from ${fileName}.${skippedText}`;
+  }
+
+  private returnToPool(unitId: number): void {
+    if (!unitId || !this.placements.has(unitId)) {
+      return;
+    }
+    this.placements.delete(unitId);
+    this.rebuildOccupancyMaps();
+    this.statusMessage = `Federation ${unitId} moved back to tray.`;
+    this.autoSaveDraft();
   }
 
   private placeFederation(unitId: number, x: number, y: number): void {

@@ -7,6 +7,29 @@
       </div>
     </div>
   }
+  @if (savePrompt) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="alertdialog" aria-label="File already exists">
+        <p>File "{{ savePrompt.fileName }}" already exists. A new version will be saved as "{{ savePrompt.nextName }}".</p>
+        <div class="warning-actions">
+          <button type="button" (click)="confirmSave('overwrite')">Overwrite</button>
+          <button type="button" (click)="confirmSave('version')">New version</button>
+          <button type="button" (click)="savePrompt = null">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
+  @if (simFileChoices) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="alertdialog" aria-label="Choose a SIM sheet">
+        <p>Choose a SIM sheet</p>
+        @for (name of simFileChoices; track name) {
+          <button type="button" class="sim-choice" (click)="loadChosenSim(name)">{{ name }}</button>
+        }
+        <button type="button" (click)="simFileChoices = null">Cancel</button>
+      </div>
+    </div>
+  }
   <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
 
   @if (!(parsedTurn && header)) {
@@ -109,7 +132,6 @@
             </button>
           }
           @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
-            <button type="button" (click)="saveDraftNow()">Save Draft</button>
             <span class="placement-stats">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
           }
           @if (loading) {
@@ -175,10 +197,13 @@
               class="cell"
               [style.background-color]="heightColor(cell.height)"
               [style.box-shadow]="cellShadow(cell)"
-              [class.setup-zone]="cellInSelectedZone(cell.x, cell.y)"
+              [class.zone-n]="onZoneEdge(cell, 'n')"
+              [class.zone-s]="onZoneEdge(cell, 's')"
+              [class.zone-w]="onZoneEdge(cell, 'w')"
+              [class.zone-e]="onZoneEdge(cell, 'e')"
               (dragover)="onCellDragOver($event)"
               (drop)="onCellDrop($event, cell.x, cell.y)"
-              (click)="onCellClick(cell.x, cell.y)"
+              (click)="onCellClick($event, cell.x, cell.y)"
             >
               @if (getOccupant(cell.x, cell.y); as occupant) {
                 <div
@@ -190,6 +215,7 @@
                   [class.troop-infantry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'infantry'"
                   [class.troop-cavalry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'cavalry'"
                   [class.troop-artillery]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'artillery'"
+                  [class.on-strategic]="onStrategicPoint(cell.x, cell.y)"
                   [attr.draggable]="occupant.kind === 'own'"
                   (dragstart)="occupant.kind === 'own' && onUnitDragStart($event, occupant.unit.id)"
                   [title]="'Federation ' + occupant.unit.id"

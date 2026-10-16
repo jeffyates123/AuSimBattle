@@ -54,6 +54,7 @@ export class App {
   protected fortressEntrenchments: Array<{ x: number | null; y: number | null }> = this.emptyFortressEntrenchments();
   protected loading = false;
   protected exporting = false;
+  protected loadingSim = false;
   protected placements = new Map<number, Coordinate>();
   protected highlightedFederationId: number | null = null;
   private lastDropAt = 0;
@@ -227,8 +228,7 @@ export class App {
   }
 
   protected canExport(): boolean {
-    const placementLimit = this.getPlacementLimit();
-    return !!this.selectedArmy && !!this.header && placementLimit !== null && this.placements.size === placementLimit;
+    return !!this.selectedArmy && !!this.selectedArmySide && !!this.header;
   }
 
   protected async downloadSimSheet(): Promise<void> {
@@ -238,13 +238,38 @@ export class App {
     this.exporting = true;
     this.exportError = '';
     try {
-      const placedUnits = this.selectedArmy.units.filter((unit) => this.placements.has(unit.id));
-      await this.excelExport.exportSetup(this.header, this.selectedArmySide, placedUnits, this.placements);
-      this.statusMessage = 'SIM setup sheet downloaded.';
+      await this.excelExport.exportSetup(
+        this.header,
+        this.selectedArmySide,
+        this.placements,
+        this.fortressEntrenchments,
+      );
+      this.statusMessage = 'SIM sheet saved.';
     } catch (error) {
       this.exportError = error instanceof Error ? error.message : 'Failed to export sheet.';
     } finally {
       this.exporting = false;
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  protected async onSimFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    this.loadingSim = true;
+    this.exportError = '';
+    try {
+      const setup = await this.excelExport.readSetup(await file.arrayBuffer());
+      this.applySimSheet(setup);
+    } catch (error) {
+      this.exportError = error instanceof Error ? error.message : 'Unable to read this SIM sheet.';
+    } finally {
+      this.loadingSim = false;
+      input.value = '';
       this.changeDetector.markForCheck();
     }
   }
@@ -395,6 +420,53 @@ export class App {
       return false;
     }
     return this.inZone({ x, y }, this.setupZones[this.selectedArmySide]);
+  }
+
+  private applySimSheet(setup: { army: ArmySide | null; generalFederation: number | null; processDate: string | null; placements: Array<{ id: number; x: number; y: number }> }): void {
+    if (!this.header || !this.parsedTurn) {
+      this.exportError = 'Load a turn before loading a SIM sheet.';
+      return;
+    }
+
+    if (setup.army) {
+      this.pickArmy(setup.army);
+    }
+    if (!this.selectedArmy || !this.selectedArmySide) {
+      this.exportError = 'The SIM sheet army is not available for this turn.';
+      return;
+    }
+
+    if (setup.generalFederation !== null) {
+      this.header.generalFederation = setup.generalFederation;
+    }
+    if (setup.processDate) {
+      this.header.processDate = setup.processDate;
+    }
+
+    const zone = this.setupZones[this.selectedArmySide];
+    const limit = this.getPlacementLimit();
+    const occupied = new Set<string>();
+    this.placements = new Map<number, Coordinate>();
+    let skipped = 0;
+
+    for (const placement of setup.placements) {
+      const known = this.selectedArmy.units.some((unit) => unit.id === placement.id);
+      const inside = this.inZone(placement, zone);
+      const key = this.coordKey(placement.x, placement.y);
+      const overLimit = limit !== null && this.placements.size >= limit;
+      if (!known || !inside || occupied.has(key) || overLimit) {
+        skipped += 1;
+        continue;
+      }
+      this.placements.set(placement.id, { x: placement.x, y: placement.y });
+      occupied.add(key);
+    }
+
+    this.highlightedFederationId = null;
+    this.rebuildOccupancyMaps();
+    this.autoSaveDraft();
+    const skippedText = skipped > 0 ? ` ${skipped} rows were skipped.` : '';
+    this.statusMessage = `Loaded ${this.placements.size} federations from the SIM sheet.${skippedText}`;
   }
 
   private placeFederation(unitId: number, x: number, y: number): void {

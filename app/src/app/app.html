@@ -1,9 +1,10 @@
 <main class="app-shell">
   <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
+  <input #simFile id="simFile" type="file" accept=".xlsx" (change)="onSimFileSelected($event)" hidden />
 
   @if (!(parsedTurn && header)) {
     <div class="load-row">
-      <button type="button" (click)="turnFile.click()">Load New</button>
+      <button type="button" (click)="turnFile.click()">Load New Turn</button>
       @if (loading) {
         <span class="muted">Parsing...</span>
       }
@@ -74,7 +75,7 @@
           </div>
         }
         <div class="load-under-fortress">
-          <button type="button" (click)="turnFile.click()">Load New</button>
+          <button type="button" (click)="turnFile.click()">Load New Turn</button>
           <label class="view-toggle">
             <input type="radio" name="sheetView" value="header" [(ngModel)]="sheetView" />
             Header
@@ -92,11 +93,16 @@
               </select>
             </label>
           }
+          @if (selectedArmy && parsedTurn.armies.length) {
+            <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
+              {{ exporting ? 'Saving...' : 'Save SIM' }}
+            </button>
+            <button type="button" [disabled]="loadingSim" (click)="simFile.click()">
+              {{ loadingSim ? 'Loading...' : 'Load SIM' }}
+            </button>
+          }
           @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
             <button type="button" (click)="saveDraftNow()">Save Draft</button>
-            <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
-              {{ exporting ? 'Exporting...' : 'Download SIM Sheet' }}
-            </button>
             <span class="placement-stats">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
           }
           @if (loading) {

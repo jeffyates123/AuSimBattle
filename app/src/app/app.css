@@ -519,6 +519,29 @@ input[type='date'] {
   color: #ff8b8b;
 }
 
+.warning-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.warning-dialog {
+  max-width: 520px;
+  padding: 20px 24px;
+  background: #1b2838;
+  border: 1px solid #c9a227;
+  color: #ffe7a3;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.warning-dialog p {
+  margin: 0 0 14px;
+}
+
 .muted {
   color: #a8b8cf;
 }

@@ -1,6 +1,13 @@
 <main class="app-shell">
+  @if (missingSimWarning) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="alertdialog" aria-label="File not found">
+        <p>File "{{ missingSimWarning }}" not found</p>
+        <button type="button" (click)="missingSimWarning = null">OK</button>
+      </div>
+    </div>
+  }
   <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
-  <input #simFile id="simFile" type="file" accept=".xlsx" (change)="onSimFileSelected($event)" hidden />
 
   @if (!(parsedTurn && header)) {
     <div class="load-row">
@@ -97,7 +104,7 @@
             <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
               {{ exporting ? 'Saving...' : 'Save SIM' }}
             </button>
-            <button type="button" [disabled]="loadingSim" (click)="simFile.click()">
+            <button type="button" [disabled]="loadingSim || !header" (click)="loadMatchingSim()">
               {{ loadingSim ? 'Loading...' : 'Load SIM' }}
             </button>
           }

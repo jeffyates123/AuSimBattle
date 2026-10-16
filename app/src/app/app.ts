@@ -36,6 +36,7 @@ export class App {
   protected header: BattleHeader | null = null;
   protected parseError = '';
   protected exportError = '';
+  protected missingSimWarning: string | null = null;
   protected statusMessage = '';
   protected sheetView: 'header' | 'deploy' = 'header';
   protected mapZoomed = false;
@@ -253,23 +254,31 @@ export class App {
     }
   }
 
-  protected async onSimFileSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) {
+  protected async loadMatchingSim(): Promise<void> {
+    if (!this.header) {
+      this.exportError = 'Load a turn before loading a SIM sheet.';
       return;
     }
 
+    const fileName = this.excelExport.fileName(this.header);
     this.loadingSim = true;
     this.exportError = '';
+    this.missingSimWarning = null;
     try {
-      const setup = await this.excelExport.readSetup(await file.arrayBuffer());
-      this.applySimSheet(setup);
+      const response = await fetch(`sim-sheets/${encodeURIComponent(fileName)}`);
+      const buffer = response.ok ? await response.arrayBuffer() : null;
+      const signature = buffer ? new Uint8Array(buffer, 0, 2) : null;
+      const isWorkbook = signature !== null && signature[0] === 0x50 && signature[1] === 0x4b;
+      if (!isWorkbook || !buffer) {
+        this.missingSimWarning = fileName;
+        return;
+      }
+      const setup = await this.excelExport.readSetup(buffer);
+      this.applySimSheet(setup, fileName);
     } catch (error) {
       this.exportError = error instanceof Error ? error.message : 'Unable to read this SIM sheet.';
     } finally {
       this.loadingSim = false;
-      input.value = '';
       this.changeDetector.markForCheck();
     }
   }
@@ -422,7 +431,15 @@ export class App {
     return this.inZone({ x, y }, this.setupZones[this.selectedArmySide]);
   }
 
-  private applySimSheet(setup: { army: ArmySide | null; generalFederation: number | null; processDate: string | null; placements: Array<{ id: number; x: number; y: number }> }): void {
+  private applySimSheet(
+    setup: {
+      army: ArmySide | null;
+      generalFederation: number | null;
+      processDate: string | null;
+      placements: Array<{ id: number; x: number; y: number }>;
+    },
+    fileName = 'the SIM sheet',
+  ): void {
     if (!this.header || !this.parsedTurn) {
       this.exportError = 'Load a turn before loading a SIM sheet.';
       return;
@@ -443,18 +460,16 @@ export class App {
       this.header.processDate = setup.processDate;
     }
 
-    const zone = this.setupZones[this.selectedArmySide];
-    const limit = this.getPlacementLimit();
     const occupied = new Set<string>();
     this.placements = new Map<number, Coordinate>();
     let skipped = 0;
 
     for (const placement of setup.placements) {
       const known = this.selectedArmy.units.some((unit) => unit.id === placement.id);
-      const inside = this.inZone(placement, zone);
+      const onMap =
+        placement.x >= 1 && placement.x <= this.mapWidth && placement.y >= 1 && placement.y <= this.mapHeight;
       const key = this.coordKey(placement.x, placement.y);
-      const overLimit = limit !== null && this.placements.size >= limit;
-      if (!known || !inside || occupied.has(key) || overLimit) {
+      if (!known || !onMap || occupied.has(key)) {
         skipped += 1;
         continue;
       }
@@ -466,7 +481,7 @@ export class App {
     this.rebuildOccupancyMaps();
     this.autoSaveDraft();
     const skippedText = skipped > 0 ? ` ${skipped} rows were skipped.` : '';
-    this.statusMessage = `Loaded ${this.placements.size} federations from the SIM sheet.${skippedText}`;
+    this.statusMessage = `Loaded ${this.placements.size} federations from ${fileName}.${skippedText}`;
   }
 
   private placeFederation(unitId: number, x: number, y: number): void {

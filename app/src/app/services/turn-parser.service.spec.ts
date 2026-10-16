@@ -38,6 +38,18 @@ describe('TurnParserService battlefield', () => {
     const woods = battle.mapCells.find((cell) => cell.x === 13 && cell.y === 2);
     expect(woods?.token).toBe('#8');
     expect(woods?.feature).toBe('woods');
+
+    const armyA = battle.armies.find((army) => army.side === 'A');
+    const armyB = battle.armies.find((army) => army.side === 'B');
+    expect(armyA?.name).toBe('Conf. of the Rhine');
+    expect(armyB?.name).toBe('Duchy of Warsaw');
+    expect(armyA?.units[0]).toMatchObject({ id: 1, troopCode: 'Fu', start: null });
+    expect(armyA?.units.some((unit) => unit.troopCode === 'GR')).toBe(true);
+    expect(armyA?.units.some((unit) => unit.troopCode === 'La')).toBe(true);
+    expect(armyB?.units[0]).toMatchObject({ id: 1, troopCode: 'Gc', start: null });
+    expect(armyB?.units[3]).toMatchObject({ id: 4, troopCode: 'Fu', start: null });
+    expect(armyB?.units.some((unit) => unit.id === 3)).toBe(true);
+    expect(armyB?.units.some((unit) => unit.id === 4)).toBe(true);
   });
 
   it('paints a Denmark battlefield that has blank lines between rows', () => {

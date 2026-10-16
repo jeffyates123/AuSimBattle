@@ -1,6 +1,16 @@
 import { Injectable } from '@angular/core';
 import { BattleHeader } from '../models/battle';
-import { ArmySide, BattleBrief, DeploymentAreaBrief, MapCell, ParsedTurn, StrategicPoint, TerrainFeature } from '../models/turn';
+import {
+  ArmyData,
+  ArmySide,
+  BattleBrief,
+  DeploymentAreaBrief,
+  FederationUnit,
+  MapCell,
+  ParsedTurn,
+  StrategicPoint,
+  TerrainFeature,
+} from '../models/turn';
 
 @Injectable({ providedIn: 'root' })
 export class TurnParserService {
@@ -13,6 +23,7 @@ export class TurnParserService {
     const mapCells = this.parseMap(lines, battle.mapStart);
     const battleBrief = this.parseBattleBrief(lines, battle.mapStart);
     const header = this.parseHeader(lines, battle.headerLine, battle.simNumber);
+    const armies = this.parseArmies(lines, battleBrief);
     header.army = this.armyFromState(header.state, battleBrief) === 'A' ? 'Army A' : 'Army B';
 
     return {
@@ -22,7 +33,7 @@ export class TurnParserService {
       deploymentAreaA: battleBrief.deploymentAreaA.name,
       deploymentAreaB: battleBrief.deploymentAreaB.name,
       battleBrief,
-      armies: [],
+      armies,
     };
   }
 
@@ -208,6 +219,86 @@ export class TurnParserService {
       match = regex.exec(raw);
     }
     return points;
+  }
+
+  private parseArmies(lines: string[], brief: BattleBrief): ArmyData[] {
+    const sideAName = brief.deploymentAreaA.name ?? 'Army A';
+    const sideBName = brief.deploymentAreaB.name ?? 'Army B';
+
+    return [
+      {
+        side: 'A',
+        name: sideAName,
+        units: this.parseFederationUnitsForNation(lines, sideAName),
+      },
+      {
+        side: 'B',
+        name: sideBName,
+        units: this.parseFederationUnitsForNation(lines, sideBName),
+      },
+    ];
+  }
+
+  private parseFederationUnitsForNation(lines: string[], nationName: string): FederationUnit[] {
+    const units = new Map<number, FederationUnit>();
+    const targetKey = this.normalizeName(nationName);
+    if (!targetKey) {
+      return [];
+    }
+
+    for (let i = 0; i < lines.length; i += 1) {
+      const heading = (lines[i] ?? '').trim();
+      const headingMatch = heading.match(/^Battalion Groups of\s+(.+)$/i);
+      if (!headingMatch || this.normalizeName(headingMatch[1]) !== targetKey) {
+        continue;
+      }
+
+      for (let j = i + 1; j < lines.length; j += 1) {
+        const line = lines[j] ?? '';
+        const trimmed = line.trim();
+        if (!trimmed) {
+          continue;
+        }
+
+        const nextHeading = trimmed.match(/^Battalion Groups of\s+(.+)$/i);
+        if (nextHeading) {
+          break;
+        }
+        if (/^Field Marshal\b/i.test(trimmed)) {
+          break;
+        }
+
+        if (
+          /^Fe\s+Type\b/i.test(trimmed) ||
+          /^Page\b/i.test(trimmed) ||
+          /^AUSTERLITZ\b/i.test(trimmed) ||
+          /^Month:/i.test(trimmed) ||
+          /^The Rise of the Eagle\b/i.test(trimmed) ||
+          /^Simulated battle No\./i.test(trimmed)
+        ) {
+          continue;
+        }
+
+        const entryRegex = /(\d+)\s+([A-Za-z]{2})\s+\d+/g;
+        let match = entryRegex.exec(trimmed);
+        while (match) {
+          const id = Number(match[1]);
+          if (!units.has(id)) {
+            units.set(id, {
+              id,
+              troopCode: match[2],
+              formationCode: null,
+              men: null,
+              morale: null,
+              start: null,
+            });
+          }
+          match = entryRegex.exec(trimmed);
+        }
+      }
+    }
+
+    return [...units.values()].sort((a, b) => a.id - b.id);
   }
 
   private emptyDeploymentArea(side: ArmySide): DeploymentAreaBrief {

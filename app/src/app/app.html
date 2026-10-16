@@ -83,11 +83,60 @@
             <input type="radio" name="sheetView" value="deploy" [(ngModel)]="sheetView" />
             Deploy
           </label>
+          @if (sheetView === 'deploy') {
+            <label class="army-quick-select">
+              Army:
+              <select [ngModel]="header.army" (ngModelChange)="onArmySelected($event)">
+                <option [ngValue]="'Army A'">Army A</option>
+                <option [ngValue]="'Army B'">Army B</option>
+              </select>
+            </label>
+          }
+          @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
+            <button type="button" (click)="saveDraftNow()">Save Draft</button>
+            <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
+              {{ exporting ? 'Exporting...' : 'Download SIM Sheet' }}
+            </button>
+            <span class="placement-stats">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
+          }
           @if (loading) {
             <span class="muted">Parsing...</span>
           }
         </div>
       </div>
+      @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
+        <div class="deploy-palette panel" [class.zoomed]="isMapZoomed()" (drop)="onTrayDrop($event)" (dragover)="onTrayDragOver($event)">
+          <div class="deploy-heading">
+            <h2>Deploy</h2>
+            <button type="button" (click)="toggleMapZoom()">{{ mapZoomed ? 'Zoom-Out' : 'Zoom-In' }}</button>
+          </div>
+          <p class="muted">Drag federation chips onto your setup zone on The Battle field map.</p>
+          <div class="palette-grid">
+            @for (unit of getUnplacedUnits(); track unit.id) {
+              <div
+                class="unit-card own"
+                [class.army-a-chip]="selectedArmySide === 'A'"
+                [class.army-b-chip]="selectedArmySide === 'B'"
+                [class.troop-infantry]="troopFamily(unit, selectedArmy.name) === 'infantry'"
+                [class.troop-cavalry]="troopFamily(unit, selectedArmy.name) === 'cavalry'"
+                [class.troop-artillery]="troopFamily(unit, selectedArmy.name) === 'artillery'"
+                [class.armed]="unit.id === highlightedFederationId"
+                draggable="true"
+                (dragstart)="onUnitDragStart($event, unit.id)"
+                (dragend)="onUnitDragEnd()"
+                (click)="onPaletteUnitClick(unit.id)"
+                [title]="'Federation ' + unit.id"
+              >
+                <span class="unit-id">{{ unit.id }}</span>
+                <span class="unit-type">{{ unit.troopCode }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      @if (sheetView === 'deploy' && exportError) {
+        <p class="error">{{ exportError }}</p>
+      }
     </section>
   }
 
@@ -97,90 +146,51 @@
         <h2>The Battle field</h2>
       </div>
       <p class="battle-brief-line">{{ battleBriefLine() }}</p>
-      <div class="map-grid">
+      <div
+        class="map-grid"
+        [class.zoomed]="isMapZoomed()"
+        [style.grid-template-columns]="'22px repeat(' + visibleColumns().length + ', ' + (isMapZoomed() ? '49.5px' : '33px') + ')'"
+      >
         <div class="axis corner"></div>
-        @for (column of columnNumbers; track column) {
+        @for (column of visibleColumns(); track column) {
           <div class="axis">{{ column }}</div>
         }
-        @for (row of rows; track row[0].y) {
+        @for (row of visibleRows(); track row[0].y) {
           <div class="axis row-axis">{{ row[0].y }}</div>
           @for (cell of row; track cell.x) {
             <div
               class="cell"
               [style.background-color]="heightColor(cell.height)"
               [style.box-shadow]="cellShadow(cell)"
+              [class.setup-zone]="cellInSelectedZone(cell.x, cell.y)"
+              (dragover)="onCellDragOver($event)"
+              (drop)="onCellDrop($event, cell.x, cell.y)"
+              (click)="onCellClick(cell.x, cell.y)"
             >
-              <span class="glyph" [class.light]="glyphIsLight(cell.height)">{{ cellLabel(cell) }}</span>
+              @if (getOccupant(cell.x, cell.y); as occupant) {
+                <div
+                  class="unit-card"
+                  [class.own]="occupant.kind === 'own'"
+                  [class.enemy]="occupant.kind === 'enemy'"
+                  [class.army-a-chip]="occupant.kind === 'own' ? selectedArmySide === 'A' : selectedArmySide === 'B'"
+                  [class.army-b-chip]="occupant.kind === 'own' ? selectedArmySide === 'B' : selectedArmySide === 'A'"
+                  [class.troop-infantry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'infantry'"
+                  [class.troop-cavalry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'cavalry'"
+                  [class.troop-artillery]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'artillery'"
+                  [attr.draggable]="occupant.kind === 'own'"
+                  (dragstart)="occupant.kind === 'own' && onUnitDragStart($event, occupant.unit.id)"
+                  [title]="'Federation ' + occupant.unit.id"
+                >
+                  <span class="unit-id">{{ occupant.unit.id }}</span>
+                  <span class="unit-type">{{ occupant.unit.troopCode }}</span>
+                </div>
+              } @else {
+                <span class="glyph" [class.light]="glyphIsLight(cell.height)">{{ cellLabel(cell) }}</span>
+              }
             </div>
           }
         }
       </div>
-    </section>
-  }
-
-  @if (selectedArmy && header && parsedTurn && parsedTurn.armies.length) {
-    <section class="panel setup-actions">
-      <div class="buttons">
-        <button type="button" (click)="saveDraftNow()">Save Draft</button>
-        <button type="button" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
-          {{ exporting ? 'Exporting...' : 'Download SIM Sheet' }}
-        </button>
-      </div>
-
-      <div class="placement-stats">
-        Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations
-      </div>
-      @if (exportError) {
-        <p class="error">{{ exportError }}</p>
-      }
-    </section>
-
-    <section class="board-layout">
-      <aside class="tray panel" (drop)="onTrayDrop($event)" (dragover)="onTrayDragOver($event)">
-        <h2>Unplaced Federations</h2>
-        <p class="muted">Drag any federation card onto a coordinate cell in your setup box.</p>
-        <div class="tray-grid">
-          @for (unit of getUnplacedUnits(); track unit.id) {
-            <div
-              class="unit-card own"
-              draggable="true"
-              (dragstart)="onUnitDragStart($event, unit.id)"
-            >
-              <span>{{ unit.id }}</span>
-            </div>
-          }
-        </div>
-      </aside>
-
-      <section class="map panel">
-        <h2>Map (45x40 coordinates)</h2>
-        <div class="map-grid">
-          @for (row of rows; let rowIndex = $index; track rowIndex) {
-            @for (cell of row; let colIndex = $index; track colIndex) {
-              <div
-                class="cell"
-                [class.setup-zone]="cellInSelectedZone(cell.x, cell.y)"
-                [class]="cellFeatureClass(cell)"
-                [style.--height]="cell.height"
-                (dragover)="onCellDragOver($event)"
-                (drop)="onCellDrop($event, cell.x, cell.y)"
-              >
-                @if (getOccupant(cell.x, cell.y); as occupant) {
-                  <div
-                    class="unit-card"
-                    [class.own]="occupant.kind === 'own'"
-                    [class.enemy]="occupant.kind === 'enemy'"
-                    [attr.draggable]="occupant.kind === 'own'"
-                    (dragstart)="occupant.kind === 'own' && onUnitDragStart($event, occupant.unit.id)"
-                  >
-                    <span>{{ occupant.unit.id }}</span>
-                  </div>
-                }
-              </div>
-            }
-          }
-        </div>
-      </section>
     </section>
   }
 

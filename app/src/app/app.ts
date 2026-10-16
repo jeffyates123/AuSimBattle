@@ -13,6 +13,7 @@ import {
 } from './models/turn';
 import { DraftService } from './services/draft.service';
 import { ExcelExportService } from './services/excel-export.service';
+import { RulesService } from './services/rules.service';
 import { TurnParserService } from './services/turn-parser.service';
 
 @Component({
@@ -37,6 +38,7 @@ export class App {
   protected exportError = '';
   protected statusMessage = '';
   protected sheetView: 'header' | 'deploy' = 'header';
+  protected mapZoomed = false;
   protected readonly columnNumbers = Array.from({ length: 45 }, (_, index) => index + 1);
   protected readonly fortressRowOne = [1, 2, 3, 4, 5];
   protected readonly fortressRowTwo = [6, 7, 8, 9, 10];
@@ -53,6 +55,9 @@ export class App {
   protected loading = false;
   protected exporting = false;
   protected placements = new Map<number, Coordinate>();
+  protected highlightedFederationId: number | null = null;
+  private lastDropAt = 0;
+  private lastPaletteDragAt = 0;
   protected rows: MapCell[][] = [];
   protected ownByCoord = new Map<string, FederationUnit>();
   protected enemyByCoord = new Map<string, FederationUnit>();
@@ -61,6 +66,7 @@ export class App {
     private readonly parser: TurnParserService,
     private readonly draft: DraftService,
     private readonly excelExport: ExcelExportService,
+    private readonly rules: RulesService,
     private readonly changeDetector: ChangeDetectorRef,
   ) {}
 
@@ -124,6 +130,7 @@ export class App {
     this.enemyArmy = enemy;
     this.header.army = side === 'A' ? 'Army A' : 'Army B';
     this.placements = new Map<number, Coordinate>();
+    this.highlightedFederationId = null;
 
     const zone = this.setupZones[side];
     own.units.forEach((unit) => {
@@ -145,6 +152,17 @@ export class App {
     }
   }
 
+  protected onUnitDragEnd(): void {
+    this.lastPaletteDragAt = performance.now();
+  }
+
+  protected onPaletteUnitClick(unitId: number): void {
+    if (performance.now() - this.lastPaletteDragAt < 400) {
+      return;
+    }
+    this.highlightedFederationId = unitId;
+  }
+
   protected onCellDragOver(event: DragEvent): void {
     event.preventDefault();
     if (event.dataTransfer) {
@@ -154,45 +172,19 @@ export class App {
 
   protected onCellDrop(event: DragEvent, x: number, y: number): void {
     event.preventDefault();
-    if (!this.selectedArmySide || !this.selectedArmy) {
-      return;
-    }
-
+    this.lastDropAt = performance.now();
     const unitId = Number(event.dataTransfer?.getData('text/plain') ?? '');
-    if (!unitId || !this.selectedArmy.units.some((unit) => unit.id === unitId)) {
+    this.placeFederation(unitId, x, y);
+  }
+
+  protected onCellClick(x: number, y: number): void {
+    if (performance.now() - this.lastDropAt < 400) {
       return;
     }
-
-    if (!this.inZone({ x, y }, this.setupZones[this.selectedArmySide])) {
-      this.statusMessage = 'Drop rejected: outside setup area.';
+    if (this.highlightedFederationId === null) {
       return;
     }
-
-    if (this.enemyHasCoord(x, y)) {
-      this.statusMessage = 'Drop rejected: enemy federation occupies that coordinate.';
-      return;
-    }
-
-    const source = this.placements.get(unitId) ?? null;
-    const occupant = this.ownByCoord.get(this.coordKey(x, y));
-    if (occupant && occupant.id === unitId) {
-      return;
-    }
-
-    if (occupant) {
-      if (source) {
-        this.placements.set(occupant.id, source);
-      } else {
-        this.placements.delete(occupant.id);
-      }
-      this.statusMessage = `Swapped federation ${unitId} with ${occupant.id}.`;
-    } else {
-      this.statusMessage = `Placed federation ${unitId} at ${x}/${y}.`;
-    }
-
-    this.placements.set(unitId, { x, y });
-    this.rebuildOccupancyMaps();
-    this.autoSaveDraft();
+    this.placeFederation(this.highlightedFederationId, x, y);
   }
 
   protected onTrayDrop(event: DragEvent): void {
@@ -226,7 +218,7 @@ export class App {
   }
 
   protected getTotalCount(): number {
-    return this.selectedArmy?.units.length ?? 0;
+    return this.getPlacementLimit() ?? 0;
   }
 
   protected getArmyLabel(side: ArmySide): string {
@@ -235,7 +227,8 @@ export class App {
   }
 
   protected canExport(): boolean {
-    return !!this.selectedArmy && this.getUnplacedUnits().length === 0 && !!this.header;
+    const placementLimit = this.getPlacementLimit();
+    return !!this.selectedArmy && !!this.header && placementLimit !== null && this.placements.size === placementLimit;
   }
 
   protected async downloadSimSheet(): Promise<void> {
@@ -245,7 +238,8 @@ export class App {
     this.exporting = true;
     this.exportError = '';
     try {
-      await this.excelExport.exportSetup(this.header, this.selectedArmySide, this.selectedArmy.units, this.placements);
+      const placedUnits = this.selectedArmy.units.filter((unit) => this.placements.has(unit.id));
+      await this.excelExport.exportSetup(this.header, this.selectedArmySide, placedUnits, this.placements);
       this.statusMessage = 'SIM setup sheet downloaded.';
     } catch (error) {
       this.exportError = error instanceof Error ? error.message : 'Failed to export sheet.';
@@ -349,11 +343,137 @@ export class App {
     return `Opponents: ${brief.opponents ?? 'unknown'}. Battlefield coordinates: ${brief.battlefieldCoordinates ?? 'unknown'}. A: ${sideAText}. B: ${sideBText}.`;
   }
 
+  protected toggleMapZoom(): void {
+    this.mapZoomed = !this.mapZoomed;
+  }
+
+  protected isMapZoomed(): boolean {
+    return this.sheetView === 'deploy' && this.mapZoomed;
+  }
+
+  protected visibleColumns(): number[] {
+    const window = this.zoomWindow();
+    if (!window) {
+      return this.columnNumbers;
+    }
+    return this.columnNumbers.filter((column) => column >= window.minX && column <= window.maxX);
+  }
+
+  protected visibleRows(): MapCell[][] {
+    const window = this.zoomWindow();
+    if (!window) {
+      return this.rows;
+    }
+    return this.rows
+      .filter((row) => {
+        const y = row[0]?.y;
+        return y !== undefined && y >= window.minY && y <= window.maxY;
+      })
+      .map((row) => row.filter((cell) => cell.x >= window.minX && cell.x <= window.maxX));
+  }
+
+  protected troopFamily(unit: FederationUnit, armyName: string | null | undefined): 'infantry' | 'cavalry' | 'artillery' {
+    const battalionNo = this.rules.getBattalionRuleByShortName(armyName, unit.troopCode)?.no;
+    if (battalionNo !== undefined && battalionNo >= 41 && battalionNo <= 45) {
+      return 'artillery';
+    }
+    if (battalionNo !== undefined && battalionNo >= 21 && battalionNo <= 39) {
+      return 'cavalry';
+    }
+    return 'infantry';
+  }
+
+  protected chipArmyName(kind: 'own' | 'enemy'): string | null {
+    if (kind === 'own') {
+      return this.selectedArmy?.name ?? null;
+    }
+    return this.enemyArmy?.name ?? null;
+  }
+
   protected cellInSelectedZone(x: number, y: number): boolean {
     if (!this.selectedArmySide) {
       return false;
     }
     return this.inZone({ x, y }, this.setupZones[this.selectedArmySide]);
+  }
+
+  private placeFederation(unitId: number, x: number, y: number): void {
+    if (!this.selectedArmySide || !this.selectedArmy) {
+      return;
+    }
+    if (!unitId || !this.selectedArmy.units.some((unit) => unit.id === unitId)) {
+      return;
+    }
+
+    if (!this.inZone({ x, y }, this.setupZones[this.selectedArmySide])) {
+      this.statusMessage = 'Drop rejected: outside setup area.';
+      return;
+    }
+
+    if (this.enemyHasCoord(x, y)) {
+      this.statusMessage = 'Drop rejected: enemy federation occupies that coordinate.';
+      return;
+    }
+
+    const source = this.placements.get(unitId) ?? null;
+    const occupant = this.ownByCoord.get(this.coordKey(x, y));
+    if (occupant && occupant.id === unitId) {
+      return;
+    }
+
+    const placementLimit = this.getPlacementLimit();
+    if (!source && !occupant && placementLimit !== null && this.placements.size >= placementLimit) {
+      this.statusMessage = `Drop rejected: deployment limit of ${placementLimit} reached.`;
+      return;
+    }
+
+    if (occupant) {
+      if (source) {
+        this.placements.set(occupant.id, source);
+      } else {
+        this.placements.delete(occupant.id);
+      }
+      this.statusMessage = `Swapped federation ${unitId} with ${occupant.id}.`;
+    } else {
+      this.statusMessage = `Placed federation ${unitId} at ${x}/${y}.`;
+    }
+
+    this.placements.set(unitId, { x, y });
+    this.highlightFollowing(unitId);
+    this.rebuildOccupancyMaps();
+    this.autoSaveDraft();
+  }
+
+  private highlightFollowing(placedId: number): void {
+    const unplaced = this.getUnplacedUnits().filter((unit) => unit.id !== placedId);
+    if (!unplaced.length) {
+      this.highlightedFederationId = null;
+      return;
+    }
+    const next = unplaced.find((unit) => unit.id > placedId) ?? unplaced[0];
+    this.highlightedFederationId = next?.id ?? null;
+  }
+
+  private zoomWindow(): SetupZone | null {
+    if (!this.isMapZoomed() || !this.selectedArmySide) {
+      return null;
+    }
+    const zone = this.setupZones[this.selectedArmySide];
+    return {
+      minX: Math.max(1, zone.minX - 1),
+      maxX: Math.min(this.mapWidth, zone.maxX + 1),
+      minY: Math.max(1, zone.minY - 1),
+      maxY: Math.min(this.mapHeight, zone.maxY + 1),
+    };
+  }
+
+  protected getPlacementLimit(): number | null {
+    if (!this.parsedTurn || !this.selectedArmySide) {
+      return null;
+    }
+    return this.selectedArmySide === 'A'
+      ? this.parsedTurn.battleBrief.deploymentAreaA.maxFederations
+      : this.parsedTurn.battleBrief.deploymentAreaB.maxFederations;
   }
 
   private rebuildOccupancyMaps(): void {
@@ -523,6 +643,10 @@ export class App {
     this.rows = this.buildRows(this.parsedTurn.mapCells);
     this.ownByCoord.clear();
     this.enemyByCoord.clear();
+    if (this.parsedTurn.armies.length) {
+      this.pickArmy(preferredArmySide);
+      return;
+    }
     this.statusMessage = `Turn parsed. Army ${preferredArmySide} selected.`;
   }
 }

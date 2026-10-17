@@ -193,6 +193,31 @@
   white-space: nowrap;
 }
 
+.fortress-actions {
+  grid-column: 1 / 3;
+  grid-row: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mini-action {
+  padding: 1px 8px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.entrench-remove {
+  position: absolute;
+  left: calc(100% + 2px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0 2px;
+  font-size: 9px;
+  line-height: 1.1;
+  border-radius: 3px;
+}
+
 .fortress-span {
   grid-column: 3 / 9;
   grid-row: 3;
@@ -206,6 +231,7 @@
 }
 
 .fortress-span > .entrenchment {
+  position: relative;
   grid-row: 1;
   display: grid;
   grid-template-columns: 2.8ch 52px 52px;
@@ -417,14 +443,19 @@ input[type='date'] {
 }
 
 .map-placed {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  margin-right: auto;
 }
 
 .map-heading h2 {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   margin: 0;
   white-space: nowrap;
+}
+
+.map-heading > .sheet-meta:last-child {
+  margin-left: auto;
 }
 
 .map-grid {
@@ -458,6 +489,20 @@ input[type='date'] {
   box-sizing: border-box;
   border-right: 1px solid #0f1723;
   border-bottom: 1px solid #0f1723;
+}
+
+.cell.entrenched::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid #333;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.map-grid.placing-entrenchment .cell {
+  cursor: crosshair;
 }
 
 .glyph {

@@ -90,6 +90,7 @@ describe('ExcelExportService.readSetup', () => {
       { id: 4, x: 18, y: 33 },
       { id: 9, x: 19, y: 34 },
     ]);
+    expect(setup.fortressEntrenchments).toEqual(Array.from({ length: 10 }, () => ({ x: null, y: null })));
   });
 
   it('fills the official template header and only the deployed coordinates', async () => {
@@ -143,7 +144,11 @@ describe('ExcelExportService.readSetup', () => {
     expect(processDate).toBeInstanceOf(Date);
     expect((processDate as Date).toISOString()).toBe('2026-02-17T00:00:00.000Z');
     expect(sheet?.getCell('L4').numFmt).toBe('mm-dd-yy');
-    expect((await service.readSetup(filled)).processDate).toBe('2026-02-17');
+    const loaded = await service.readSetup(filled);
+    expect(loaded.processDate).toBe('2026-02-17');
+    expect(loaded.fortressEntrenchments[0]).toEqual({ x: 12, y: 3 });
+    expect(loaded.fortressEntrenchments[1]).toEqual({ x: null, y: null });
+    expect(loaded.fortressEntrenchments[5]).toEqual({ x: 18, y: 8 });
     const filledZip = await JSZip.loadAsync(filled);
     const styles = await filledZip.file('xl/styles.xml')?.async('string');
     const templateStyles = await JSZip.loadAsync(template).then((zip) => zip.file('xl/styles.xml')?.async('string'));

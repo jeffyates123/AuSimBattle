@@ -30,6 +30,14 @@
       </div>
     </div>
   }
+  @if (entrenchmentWarning) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="alertdialog" aria-label="No free entrenchment">
+        <p>{{ entrenchmentWarning }}</p>
+        <button type="button" (click)="entrenchmentWarning = null">OK</button>
+      </div>
+    </div>
+  }
   @if (clearAllPrompt) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="Clear all federations">
@@ -162,10 +170,19 @@
             </span>
 
             <span class="fortress-label">Fortress Entrenchments:</span>
+            <div class="fortress-actions">
+              <button
+                type="button"
+                class="mini-action"
+                [class.active]="awaitingEntrenchment"
+                (click)="beginEntrenchmentPlacement($event)"
+              >Add</button>
+              <button type="button" class="mini-action" (click)="clearEntrenchments()">Clear</button>
+            </div>
             @for (row of fortressRows; track $index) {
               <div class="fortress-span" [class.bottom]="$index === 1">
                 @for (slot of row; track slot) {
-                  <label
+                  <div
                     class="entrenchment"
                     [class.anchor]="isAnchored(slot)"
                     [class.between]="!isAnchored(slot)"
@@ -173,12 +190,18 @@
                   >
                     <span class="slot-label">{{ slot }} <span class="slot-colon" aria-hidden="true">:</span></span>
                     <span class="sheet-value coord">
-                      <input type="number" min="1" max="45" [(ngModel)]="fortressEntrenchments[slot - 1].x" />
+                      <input type="number" min="1" max="45" [(ngModel)]="fortressEntrenchments[slot - 1].x" (change)="onEntrenchmentEdited()" />
                     </span>
                     <span class="sheet-value coord">
-                      <input type="number" min="1" max="40" [(ngModel)]="fortressEntrenchments[slot - 1].y" />
+                      <input type="number" min="1" max="40" [(ngModel)]="fortressEntrenchments[slot - 1].y" (change)="onEntrenchmentEdited()" />
                     </span>
-                  </label>
+                    <button
+                      type="button"
+                      class="entrench-remove"
+                      [attr.aria-label]="'Remove entrenchment ' + slot"
+                      (click)="clearEntrenchmentSlot(slot)"
+                    >[x]</button>
+                  </div>
                 }
               </div>
             }
@@ -217,10 +240,10 @@
   @if (rows.length) {
     <section class="map panel">
       <div class="map-heading">
-        <h2>The Battle field</h2>
         @if (selectedArmy && parsedTurn?.armies?.length) {
           <span class="sheet-meta map-placed">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
         }
+        <h2>The Battle field</h2>
         <span class="sheet-meta">
           <span>{{ deploymentAreaLabel() }}</span>
           <span>{{ mainTerrainLabel() }}</span>
@@ -229,6 +252,7 @@
       <div
         class="map-grid"
         [class.zoomed]="isMapZoomed()"
+        [class.placing-entrenchment]="awaitingEntrenchment"
         [style.grid-template-columns]="'var(--axis-w) repeat(' + visibleColumns().length + ', var(--cell-w))'"
       >
         <div class="axis corner"></div>
@@ -246,6 +270,8 @@
               [class.zone-s]="onZoneEdge(cell, 's')"
               [class.zone-w]="onZoneEdge(cell, 'w')"
               [class.zone-e]="onZoneEdge(cell, 'e')"
+              [class.deployment]="inSelectedSetup(cell.x, cell.y)"
+              [class.entrenched]="hasEntrenchment(cell.x, cell.y)"
               (dragover)="onCellDragOver($event)"
               (drop)="onCellDrop($event, cell.x, cell.y)"
               (click)="onCellClick($event, cell.x, cell.y)"

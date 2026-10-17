@@ -15,6 +15,7 @@ export interface SimSheetSetup {
   generalFederation: number | null;
   processDate: string | null;
   placements: SimSheetPlacement[];
+  fortressEntrenchments: Array<{ x: number | null; y: number | null }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -89,7 +90,26 @@ export class ExcelExportService {
       generalFederation: this.cellNumber(sheet.getCell('R3').value),
       processDate: this.cellDate(sheet.getCell('L4').value),
       placements,
+      fortressEntrenchments: this.readFortress(sheet),
     };
+  }
+
+  private readFortress(sheet: ExcelJS.Worksheet): Array<{ x: number | null; y: number | null }> {
+    const columns = [
+      ['F', 'G'],
+      ['I', 'J'],
+      ['L', 'M'],
+      ['O', 'P'],
+      ['R', 'S'],
+    ];
+    return Array.from({ length: 10 }, (_, index) => {
+      const row = index < 5 ? 6 : 8;
+      const [xColumn, yColumn] = columns[index % 5];
+      return {
+        x: this.cellNumber(sheet.getCell(`${xColumn}${row}`).value),
+        y: this.cellNumber(sheet.getCell(`${yColumn}${row}`).value),
+      };
+    });
   }
 
   private writeHeaderXml(sheetXml: string, header: BattleHeader, army: ArmySide): string {

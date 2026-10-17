@@ -5,6 +5,7 @@ import { ArmySide, Coordinate } from '../models/turn';
 export interface SetupDraft {
   header: BattleHeader;
   placements: Record<number, Coordinate>;
+  fortressEntrenchments?: Array<{ x: number | null; y: number | null }>;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BattleHeader } from './models/battle';
 import {
@@ -12,7 +12,7 @@ import {
   SetupZone,
 } from './models/turn';
 import { DraftService } from './services/draft.service';
-import { ExcelExportService } from './services/excel-export.service';
+import { ExcelExportService, SimSheetSetup } from './services/excel-export.service';
 import { RulesService } from './services/rules.service';
 import { TurnParserService } from './services/turn-parser.service';
 
@@ -44,6 +44,8 @@ export class App {
   protected sheetView: 'header' | 'deploy' = 'header';
   protected mapZoomed = false;
   protected fedsHidden = false;
+  protected awaitingEntrenchment = false;
+  protected entrenchmentWarning: string | null = null;
   protected readonly columnNumbers = Array.from({ length: 45 }, (_, index) => index + 1);
   protected readonly fortressRowOne = [1, 2, 3, 4, 5];
   protected readonly fortressRowTwo = [6, 7, 8, 9, 10];
@@ -138,6 +140,8 @@ export class App {
     this.header.army = side === 'A' ? 'Army A' : 'Army B';
     this.placements = new Map<number, Coordinate>();
     this.highlightedFederationId = null;
+    this.fortressEntrenchments = this.emptyFortressEntrenchments();
+    this.awaitingEntrenchment = false;
 
     const zone = this.setupZones[side];
     own.units.forEach((unit) => {
@@ -187,6 +191,13 @@ export class App {
     if (performance.now() - this.lastDropAt < 400) {
       return;
     }
+    if (this.awaitingEntrenchment) {
+      if (this.inSelectedSetup(x, y)) {
+        this.placeEntrenchment(x, y);
+        return;
+      }
+      this.awaitingEntrenchment = false;
+    }
     const own = this.ownByCoord.get(this.coordKey(x, y));
     if (event.detail >= 2 && own) {
       if (performance.now() - this.armedClickAt > 500) {
@@ -203,11 +214,67 @@ export class App {
 
   protected onCellContextMenu(event: MouseEvent, x: number, y: number): void {
     event.preventDefault();
+    if (this.clearEntrenchmentAt(x, y)) {
+      return;
+    }
     const own = this.ownByCoord.get(this.coordKey(x, y));
     if (!own) {
       return;
     }
     this.returnToPool(own.id);
+  }
+
+  protected beginEntrenchmentPlacement(event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.awaitingEntrenchment) {
+      this.awaitingEntrenchment = false;
+      this.statusMessage = 'Entrenchment placement cancelled.';
+      return;
+    }
+    if (this.firstEmptyEntrenchment() < 0) {
+      this.entrenchmentWarning = 'No free fortress entrenchment. All 10 slots are in use.';
+      return;
+    }
+    this.awaitingEntrenchment = true;
+    this.highlightedFederationId = null;
+    this.statusMessage = 'Click squares in the deployment area to place entrenchments. Click elsewhere to stop.';
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected cancelEntrenchmentOnClickElsewhere(event: MouseEvent): void {
+    if (!this.awaitingEntrenchment) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.cell.deployment')) {
+      return;
+    }
+    this.awaitingEntrenchment = false;
+  }
+
+  protected clearEntrenchments(): void {
+    this.fortressEntrenchments = this.emptyFortressEntrenchments();
+    this.awaitingEntrenchment = false;
+    this.statusMessage = 'Fortress entrenchments cleared.';
+    this.autoSaveDraft();
+  }
+
+  protected clearEntrenchmentSlot(slot: number): void {
+    const index = slot - 1;
+    if (!this.fortressEntrenchments[index]) {
+      return;
+    }
+    this.fortressEntrenchments[index] = { x: null, y: null };
+    this.statusMessage = `Entrenchment ${slot} cleared.`;
+    this.autoSaveDraft();
+  }
+
+  protected onEntrenchmentEdited(): void {
+    this.autoSaveDraft();
+  }
+
+  protected hasEntrenchment(x: number, y: number): boolean {
+    return this.entrenchmentIndexAt(x, y) >= 0;
   }
 
   protected onTrayDrop(event: DragEvent): void {
@@ -539,15 +606,7 @@ export class App {
     return brief.deploymentAreaA.strategicPoints.some(matches) || brief.deploymentAreaB.strategicPoints.some(matches);
   }
 
-  private applySimSheet(
-    setup: {
-      army: ArmySide | null;
-      generalFederation: number | null;
-      processDate: string | null;
-      placements: Array<{ id: number; x: number; y: number }>;
-    },
-    fileName = 'the SIM sheet',
-  ): void {
+  private applySimSheet(setup: SimSheetSetup, fileName = 'the SIM sheet'): void {
     if (!this.header || !this.parsedTurn) {
       this.exportError = 'Load a turn before loading a SIM sheet.';
       return;
@@ -585,6 +644,11 @@ export class App {
       occupied.add(key);
     }
 
+    this.fortressEntrenchments = this.emptyFortressEntrenchments().map((slot, index) => {
+      const saved = setup.fortressEntrenchments[index];
+      return saved ? { x: this.coordValue(saved.x), y: this.coordValue(saved.y) } : slot;
+    });
+    this.awaitingEntrenchment = false;
     this.highlightedFederationId = null;
     this.rebuildOccupancyMaps();
     this.autoSaveDraft();
@@ -729,6 +793,10 @@ export class App {
     this.draft.save(gameId, sim, this.selectedArmySide, {
       header: this.header,
       placements: placementsRecord,
+      fortressEntrenchments: this.fortressEntrenchments.map((slot) => ({
+        x: this.coordValue(slot.x),
+        y: this.coordValue(slot.y),
+      })),
     });
   }
 
@@ -746,6 +814,13 @@ export class App {
     this.header.generalFederation = draft.header.generalFederation;
     this.header.processDate = draft.header.processDate;
     const zone = this.setupZones[this.selectedArmySide];
+
+    if (draft.fortressEntrenchments?.length) {
+      this.fortressEntrenchments = this.emptyFortressEntrenchments().map((slot, index) => {
+        const saved = draft.fortressEntrenchments?.[index];
+        return saved ? { x: this.coordValue(saved.x), y: this.coordValue(saved.y) } : slot;
+      });
+    }
 
     this.placements.clear();
     this.selectedArmy.units.forEach((unit) => {
@@ -841,6 +916,62 @@ export class App {
     return Array.from({ length: 10 }, () => ({ x: null, y: null }));
   }
 
+  private placeEntrenchment(x: number, y: number): void {
+    if (!this.inSelectedSetup(x, y)) {
+      return;
+    }
+    if (this.entrenchmentIndexAt(x, y) >= 0) {
+      this.statusMessage = 'That square already has an entrenchment.';
+      return;
+    }
+    const index = this.firstEmptyEntrenchment();
+    if (index < 0) {
+      this.awaitingEntrenchment = false;
+      this.entrenchmentWarning = 'No free fortress entrenchment. All 10 slots are in use.';
+      return;
+    }
+    this.fortressEntrenchments[index] = { x, y };
+    const next = this.firstEmptyEntrenchment();
+    if (next < 0) {
+      this.awaitingEntrenchment = false;
+      this.statusMessage = `Entrenchment ${index + 1} placed at ${x}, ${y}. All entrenchment slots are filled.`;
+    } else {
+      this.statusMessage = `Entrenchment ${index + 1} placed at ${x}, ${y}.`;
+    }
+    this.autoSaveDraft();
+  }
+
+  protected inSelectedSetup(x: number, y: number): boolean {
+    return !!this.selectedArmySide && this.inZone({ x, y }, this.setupZones[this.selectedArmySide]);
+  }
+
+  private clearEntrenchmentAt(x: number, y: number): boolean {
+    const index = this.entrenchmentIndexAt(x, y);
+    if (index < 0) {
+      return false;
+    }
+    this.fortressEntrenchments[index] = { x: null, y: null };
+    this.statusMessage = `Entrenchment ${index + 1} cleared.`;
+    this.autoSaveDraft();
+    return true;
+  }
+
+  private firstEmptyEntrenchment(): number {
+    return this.fortressEntrenchments.findIndex((slot) => this.coordValue(slot.x) === null && this.coordValue(slot.y) === null);
+  }
+
+  private entrenchmentIndexAt(x: number, y: number): number {
+    return this.fortressEntrenchments.findIndex((slot) => this.coordValue(slot.x) === x && this.coordValue(slot.y) === y);
+  }
+
+  private coordValue(value: number | null): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
   private parseTurnText(text: string): void {
     this.parsedTurn = this.parser.parse(text);
     this.header = { ...this.parsedTurn.header };
@@ -849,6 +980,7 @@ export class App {
     }
     const preferredArmySide: ArmySide = this.header.army === 'Army B' ? 'B' : 'A';
     this.fortressEntrenchments = this.emptyFortressEntrenchments();
+    this.awaitingEntrenchment = false;
     this.header.army = preferredArmySide === 'A' ? 'Army A' : 'Army B';
     this.selectedArmySide = preferredArmySide;
     this.selectedArmy = null;

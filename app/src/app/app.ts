@@ -47,9 +47,31 @@ export class App {
   protected awaitingEntrenchment = false;
   protected entrenchmentWarning: string | null = null;
   protected readonly columnNumbers = Array.from({ length: 45 }, (_, index) => index + 1);
-  protected readonly fortressRowOne = [1, 2, 3, 4, 5];
-  protected readonly fortressRowTwo = [6, 7, 8, 9, 10];
-  protected readonly fortressRows = [this.fortressRowOne, this.fortressRowTwo];
+  protected fortressForSelectedArmy(): { sizeLabel: string; entrenchments: number; wallStrength: number } | null {
+    const fortress = this.parsedTurn?.battleBrief.fortress;
+    if (!fortress || this.selectedArmySide !== 'A') {
+      return null;
+    }
+    const allowance = this.rules.fortressAllowance(fortress.size);
+    if (!allowance) {
+      return null;
+    }
+    return {
+      sizeLabel: fortress.size.charAt(0).toUpperCase() + fortress.size.slice(1),
+      entrenchments: allowance.entrenchments,
+      wallStrength: allowance.wallStrength,
+    };
+  }
+
+  protected fortressSlotRows(): number[][] {
+    const count = this.fortressForSelectedArmy()?.entrenchments ?? 0;
+    const slots = Array.from({ length: count }, (_, index) => index + 1);
+    const rows: number[][] = [];
+    for (let index = 0; index < slots.length; index += 5) {
+      rows.push(slots.slice(index, index + 5));
+    }
+    return rows;
+  }
 
   protected isAnchored(slot: number): boolean {
     return ((slot - 1) % 5) % 2 === 0;
@@ -231,8 +253,12 @@ export class App {
       this.statusMessage = 'Entrenchment placement cancelled.';
       return;
     }
+    const limit = this.entrenchmentLimit();
+    if (limit === 0) {
+      return;
+    }
     if (this.firstEmptyEntrenchment() < 0) {
-      this.entrenchmentWarning = 'No free fortress entrenchment. All 10 slots are in use.';
+      this.entrenchmentWarning = `No free fortress entrenchment. All ${limit} slots are in use.`;
       return;
     }
     this.awaitingEntrenchment = true;
@@ -415,15 +441,15 @@ export class App {
       this.header,
       this.selectedArmySide,
       this.placements,
-      this.fortressEntrenchments,
+      this.keptFortressEntrenchments(),
       fileName,
     );
     this.statusMessage = `SIM sheet saved as ${fileName}.`;
   }
 
   private async readSimFile(fileName: string): Promise<void> {
-    const saved = this.excelExport.readSavedWorkbook(fileName);
-    const buffer = saved ?? (await this.fetchWorkbook(fileName));
+    const fetched = await this.fetchWorkbook(fileName);
+    const buffer = fetched ?? this.excelExport.readSavedWorkbook(fileName);
     if (!buffer) {
       this.missingSimWarning = fileName;
       return;
@@ -433,7 +459,7 @@ export class App {
   }
 
   private async fetchWorkbook(fileName: string): Promise<ArrayBuffer | null> {
-    const response = await fetch(`sim-sheets/${encodeURIComponent(fileName)}`);
+    const response = await fetch(`sim-sheets/${encodeURIComponent(fileName)}`, { cache: 'no-store' });
     if (!response.ok) {
       return null;
     }
@@ -515,10 +541,7 @@ export class App {
   }
 
   protected cellShadow(cell: MapCell): string {
-    const shadows = [this.specialBorderShadow(cell), this.strategicPointShadow(cell)].filter(
-      (value) => value.length > 0,
-    );
-    return shadows.join(', ');
+    return this.specialBorderShadow(cell);
   }
 
   protected armyChoiceLabel(army: 'Army A' | 'Army B'): string {
@@ -644,16 +667,14 @@ export class App {
       occupied.add(key);
     }
 
-    this.fortressEntrenchments = this.emptyFortressEntrenchments().map((slot, index) => {
-      const saved = setup.fortressEntrenchments[index];
-      return saved ? { x: this.coordValue(saved.x), y: this.coordValue(saved.y) } : slot;
-    });
+    this.fortressEntrenchments = this.keptFortressEntrenchments(setup.fortressEntrenchments);
     this.awaitingEntrenchment = false;
     this.highlightedFederationId = null;
     this.rebuildOccupancyMaps();
     this.autoSaveDraft();
     const skippedText = skipped > 0 ? ` ${skipped} rows were skipped.` : '';
-    this.statusMessage = `Loaded ${this.placements.size} federations from ${fileName}.${skippedText}`;
+    const armyLabel = this.header.army === 'Army B' ? 'Army B' : 'Army A';
+    this.statusMessage = `Loaded ${this.placements.size} federations for ${armyLabel} from ${fileName}.${skippedText}`;
   }
 
   protected askClearAll(): void {
@@ -793,10 +814,7 @@ export class App {
     this.draft.save(gameId, sim, this.selectedArmySide, {
       header: this.header,
       placements: placementsRecord,
-      fortressEntrenchments: this.fortressEntrenchments.map((slot) => ({
-        x: this.coordValue(slot.x),
-        y: this.coordValue(slot.y),
-      })),
+      fortressEntrenchments: this.keptFortressEntrenchments(),
     });
   }
 
@@ -816,10 +834,7 @@ export class App {
     const zone = this.setupZones[this.selectedArmySide];
 
     if (draft.fortressEntrenchments?.length) {
-      this.fortressEntrenchments = this.emptyFortressEntrenchments().map((slot, index) => {
-        const saved = draft.fortressEntrenchments?.[index];
-        return saved ? { x: this.coordValue(saved.x), y: this.coordValue(saved.y) } : slot;
-      });
+      this.fortressEntrenchments = this.keptFortressEntrenchments(draft.fortressEntrenchments);
     }
 
     this.placements.clear();
@@ -857,11 +872,11 @@ export class App {
       return null;
     }
     const value = String(army).trim();
-    if (value === 'Army A' || value.endsWith('Army A')) {
-      return 'Army A';
-    }
-    if (value === 'Army B' || value.endsWith('Army B')) {
+    if (/\bArmy B\b/.test(value)) {
       return 'Army B';
+    }
+    if (/\bArmy A\b/.test(value)) {
+      return 'Army A';
     }
     return null;
   }
@@ -891,27 +906,6 @@ export class App {
     return cell?.x === x && cell.token.startsWith('$');
   }
 
-  private strategicPointShadow(cell: MapCell): string {
-    const brief = this.parsedTurn?.battleBrief;
-    if (!brief) {
-      return '';
-    }
-
-    const isA = brief.deploymentAreaA.strategicPoints.some((point) => point.x === cell.x && point.y === cell.y);
-    const isB = brief.deploymentAreaB.strategicPoints.some((point) => point.x === cell.x && point.y === cell.y);
-
-    if (isA && isB) {
-      return 'inset 0 0 0 4px #ff2d2d, inset 0 0 0 7px #3d8bff';
-    }
-    if (isA) {
-      return 'inset 0 0 0 4px #ff2d2d';
-    }
-    if (isB) {
-      return 'inset 0 0 0 4px #3d8bff';
-    }
-    return '';
-  }
-
   private emptyFortressEntrenchments(): Array<{ x: number | null; y: number | null }> {
     return Array.from({ length: 10 }, () => ({ x: null, y: null }));
   }
@@ -927,7 +921,7 @@ export class App {
     const index = this.firstEmptyEntrenchment();
     if (index < 0) {
       this.awaitingEntrenchment = false;
-      this.entrenchmentWarning = 'No free fortress entrenchment. All 10 slots are in use.';
+      this.entrenchmentWarning = `No free fortress entrenchment. All ${this.entrenchmentLimit()} slots are in use.`;
       return;
     }
     this.fortressEntrenchments[index] = { x, y };
@@ -956,12 +950,39 @@ export class App {
     return true;
   }
 
+  private entrenchmentLimit(): number {
+    return this.fortressForSelectedArmy()?.entrenchments ?? 0;
+  }
+
+  private keptFortressEntrenchments(
+    source: Array<{ x: number | null; y: number | null }> = this.fortressEntrenchments,
+  ): Array<{ x: number | null; y: number | null }> {
+    const limit = this.entrenchmentLimit();
+    return this.emptyFortressEntrenchments().map((slot, index) => {
+      if (index >= limit) {
+        return slot;
+      }
+      const saved = source[index];
+      return saved ? { x: this.coordValue(saved.x), y: this.coordValue(saved.y) } : slot;
+    });
+  }
+
   private firstEmptyEntrenchment(): number {
-    return this.fortressEntrenchments.findIndex((slot) => this.coordValue(slot.x) === null && this.coordValue(slot.y) === null);
+    const limit = this.entrenchmentLimit();
+    for (let index = 0; index < limit; index += 1) {
+      const slot = this.fortressEntrenchments[index];
+      if (!slot || (this.coordValue(slot.x) === null && this.coordValue(slot.y) === null)) {
+        return index;
+      }
+    }
+    return -1;
   }
 
   private entrenchmentIndexAt(x: number, y: number): number {
-    return this.fortressEntrenchments.findIndex((slot) => this.coordValue(slot.x) === x && this.coordValue(slot.y) === y);
+    const limit = this.entrenchmentLimit();
+    return this.fortressEntrenchments.findIndex(
+      (slot, index) => index < limit && this.coordValue(slot.x) === x && this.coordValue(slot.y) === y,
+    );
   }
 
   private coordValue(value: number | null): number | null {

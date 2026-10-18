@@ -123,7 +123,7 @@
               aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click to remove a deployed federation. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
             >i</button>
           }
-          @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
+          @if (selectedArmy && parsedTurn.armies.length) {
             <div class="deploy-tools">
               <button type="button" class="paired-action" (click)="toggleFedsHidden()">
                 {{ fedsHidden ? 'Show Feds' : 'Hide Feds' }}
@@ -169,8 +169,10 @@
               </span>
             </span>
 
+            @if (fortressForSelectedArmy(); as fortress) {
             <span class="fortress-label">Fortress Entrenchments:</span>
             <div class="fortress-actions">
+              <span class="fortress-note">{{ fortress.sizeLabel }}, wall {{ fortress.wallStrength }}</span>
               <button
                 type="button"
                 class="mini-action"
@@ -179,7 +181,7 @@
               >Add</button>
               <button type="button" class="mini-action" (click)="clearEntrenchments()">Clear</button>
             </div>
-            @for (row of fortressRows; track $index) {
+            @for (row of fortressSlotRows(); track $index) {
               <div class="fortress-span" [class.bottom]="$index === 1">
                 @for (slot of row; track slot) {
                   <div
@@ -204,6 +206,7 @@
                   </div>
                 }
               </div>
+            }
             }
           </div>
         }
@@ -271,6 +274,7 @@
               [class.zone-w]="onZoneEdge(cell, 'w')"
               [class.zone-e]="onZoneEdge(cell, 'e')"
               [class.deployment]="inSelectedSetup(cell.x, cell.y)"
+              [class.strategic]="onStrategicPoint(cell.x, cell.y)"
               [class.entrenched]="hasEntrenchment(cell.x, cell.y)"
               (dragover)="onCellDragOver($event)"
               (drop)="onCellDrop($event, cell.x, cell.y)"
@@ -287,7 +291,6 @@
                   [class.troop-infantry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'infantry'"
                   [class.troop-cavalry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'cavalry'"
                   [class.troop-artillery]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'artillery'"
-                  [class.on-strategic]="onStrategicPoint(cell.x, cell.y)"
                   [attr.draggable]="occupant.kind === 'own'"
                   (dragstart)="occupant.kind === 'own' && onUnitDragStart($event, occupant.unit.id)"
                   [title]="'Federation ' + occupant.unit.id"

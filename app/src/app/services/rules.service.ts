@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import armyTablesData from '../data/army-tables.json';
 import simBattleRulesData from '../data/sim-battle-rules.json';
+import { FortressSize } from '../models/turn';
 
 type FormationCode = 'Co' | 'Li' | 'Sk' | 'Sq';
 type TroopSpecCode = 'Lc' | 'Lr' | 'Cu';
@@ -57,6 +58,13 @@ export class RulesService {
 
   getSimBattleStore(): SimBattleRulesStore {
     return this.simBattleStore;
+  }
+
+  fortressAllowance(size: FortressSize | null | undefined): { entrenchments: number; wallStrength: number } | null {
+    if (!size) {
+      return null;
+    }
+    return this.simBattleStore.fortresses[size] ?? null;
   }
 
   getNationRule(nationName: string | null | undefined): ArmyNationRule | null {

@@ -57,10 +57,19 @@ export interface DeploymentAreaBrief {
   strategicPoints: StrategicPoint[];
 }
 
+export type FortressSize = 'small' | 'medium' | 'large';
+
+export interface FortressBrief {
+  ownerName: string;
+  side: ArmySide;
+  size: FortressSize;
+}
+
 export interface BattleBrief {
   opponents: string | null;
   battlefieldCoordinates: string | null;
   mainTerrain: string | null;
+  fortress: FortressBrief | null;
   deploymentAreaA: DeploymentAreaBrief;
   deploymentAreaB: DeploymentAreaBrief;
 }

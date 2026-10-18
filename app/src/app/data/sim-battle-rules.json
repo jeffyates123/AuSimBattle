@@ -23,6 +23,11 @@
     "strategicPointsPerSide": 3,
     "strategicPointsMinDistance": 5
   },
+  "fortresses": {
+    "small": { "entrenchments": 10, "wallStrength": 100 },
+    "medium": { "entrenchments": 5, "wallStrength": 350 },
+    "large": { "entrenchments": 10, "wallStrength": 500 }
+  },
   "orders": {
     "movementAttack": [
       {

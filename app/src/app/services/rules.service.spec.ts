@@ -27,6 +27,13 @@ describe('RulesService', () => {
     expect(distanceOne?.artillery).toBe(250);
   });
 
+  it('gives fortress entrenchments and wall strength by size', () => {
+    expect(rules.fortressAllowance('small')).toEqual({ entrenchments: 10, wallStrength: 100 });
+    expect(rules.fortressAllowance('medium')).toEqual({ entrenchments: 5, wallStrength: 350 });
+    expect(rules.fortressAllowance('large')).toEqual({ entrenchments: 10, wallStrength: 500 });
+    expect(rules.fortressAllowance(null)).toBeNull();
+  });
+
   it('returns null for unknown nation', () => {
     expect(rules.getNationRule('Unknown Nation')).toBeNull();
     expect(rules.getBattalionRuleByNo('Unknown Nation', 1)).toBeNull();

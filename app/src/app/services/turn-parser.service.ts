@@ -5,6 +5,7 @@ import {
   ArmySide,
   BattleBrief,
   DeploymentAreaBrief,
+  FortressSize,
   FederationUnit,
   MapCell,
   ParsedTurn,
@@ -154,6 +155,7 @@ export class TurnParserService {
       opponents: null,
       battlefieldCoordinates: null,
       mainTerrain: null,
+      fortress: null,
       deploymentAreaA: this.emptyDeploymentArea('A'),
       deploymentAreaB: this.emptyDeploymentArea('B'),
     };
@@ -200,11 +202,31 @@ export class TurnParserService {
       const terrainMatch = trimmed.match(/^Main terrain:\s*([A-Za-z])$/i);
       if (terrainMatch) {
         brief.mainTerrain = terrainMatch[1].toUpperCase();
+        brief.fortress = this.parseFortressLine(lines, i + 1);
         break;
       }
     }
 
     return brief;
+  }
+
+  private parseFortressLine(lines: string[], start: number): BattleBrief['fortress'] {
+    for (let i = start; i < Math.min(lines.length, start + 4); i += 1) {
+      const trimmed = (lines[i] ?? '').trim();
+      if (!trimmed) {
+        continue;
+      }
+      const match = trimmed.match(/^(.+?)\s+has an?\s+(small|medium|large)\s+fortress\.?$/i);
+      if (!match) {
+        return null;
+      }
+      return {
+        ownerName: match[1].trim(),
+        side: 'A',
+        size: match[2].toLowerCase() as FortressSize,
+      };
+    }
+    return null;
   }
 
   private parseStrategicPoints(raw: string): StrategicPoint[] {
@@ -311,20 +333,49 @@ export class TurnParserService {
   }
 
   private armyFromState(state: string | null, brief: BattleBrief): ArmySide {
-    const normalizedState = this.normalizeName(state);
-    if (!normalizedState) {
-      return 'A';
+    const scoreA = this.nameScore(state, brief.deploymentAreaA.name);
+    const scoreB = this.nameScore(state, brief.deploymentAreaB.name);
+    return scoreB > scoreA ? 'B' : 'A';
+  }
+
+  private nameScore(state: string | null, area: string | null): number {
+    const left = this.compactName(state);
+    const right = this.compactName(area);
+    if (!left || !right) {
+      return 0;
+    }
+    if (left === right) {
+      return 100;
+    }
+    if (left.includes(right) || right.includes(left)) {
+      return 80;
     }
 
-    if (this.normalizeName(brief.deploymentAreaB.name) === normalizedState) {
-      return 'B';
-    }
-
-    return 'A';
+    const stateTokens = this.nameTokens(state);
+    const areaTokens = this.nameTokens(area);
+    return stateTokens.reduce((score, token) => {
+      const matched = areaTokens.some(
+        (areaToken) => areaToken === token || areaToken.startsWith(token) || token.startsWith(areaToken),
+      );
+      return matched ? score + 20 : score;
+    }, 0);
   }
 
   private normalizeName(name: string | null): string {
     return (name ?? '').trim().toLowerCase();
+  }
+
+  private compactName(name: string | null): string {
+    return (name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private nameTokens(name: string | null): string[] {
+    return (name ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter((token) => token.length > 2 && token !== 'the' && token !== 'and');
   }
 
   private parseHeader(lines: string[], battleLine: number, simNumber: number): BattleHeader {

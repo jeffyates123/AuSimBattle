@@ -280,7 +280,7 @@ export class ExcelExportService {
   }
 
   private async workbookExists(fileName: string): Promise<boolean> {
-    const response = await fetch(`sim-sheets/${encodeURIComponent(fileName)}`);
+    const response = await fetch(`sim-sheets/${encodeURIComponent(fileName)}`, { cache: 'no-store' });
     if (!response.ok) {
       return false;
     }

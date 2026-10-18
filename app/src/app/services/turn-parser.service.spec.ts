@@ -16,6 +16,11 @@ describe('TurnParserService battlefield', () => {
     expect(battle.battleBrief.opponents).toBe('Conf. of the Rhine vs Duchy of Warsaw');
     expect(battle.battleBrief.battlefieldCoordinates).toBe('44 / 27');
     expect(battle.battleBrief.mainTerrain).toBe('G');
+    expect(battle.battleBrief.fortress).toEqual({
+      ownerName: 'Conf. of the Rhine',
+      side: 'A',
+      size: 'large',
+    });
     expect(battle.battleBrief.deploymentAreaA.maxFederations).toBe(99);
     expect(battle.battleBrief.deploymentAreaB.maxFederations).toBe(81);
     expect(battle.battleBrief.deploymentAreaA.strategicPoints).toEqual([
@@ -59,10 +64,41 @@ describe('TurnParserService battlefield', () => {
     expect(battle.simNumber).toBe(196);
     expect(battle.header.army).toBe('Army A');
     expect(battle.battleBrief.mainTerrain).toBe('B');
+    expect(battle.battleBrief.fortress).toBeNull();
     expect(battle.battleBrief.deploymentAreaA.maxFederations).toBe(102);
     expect(battle.battleBrief.deploymentAreaB.maxFederations).toBe(78);
     expect(battle.mapCells).toHaveLength(45 * 40);
     expect(battle.mapCells[0]?.token).toBe('.2');
+  });
+
+  it('selects Army B when the state is deployment area B under a shorter name', () => {
+    const warsaw = readFileSync(resolve(process.cwd(), '../124W0213.txt'), 'utf8');
+    const shortened = warsaw.replace(/Game:\s*AU-124\s+Duchy of Warsaw/g, 'Game: AU-124                Warsaw');
+    expect(parser.parse(shortened).header.army).toBe('Army B');
+
+    const denmark = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const britain = denmark.replace(/Game:\s*AU-124\s+Denmark/g, 'Game: AU-124                        Gt. Britain');
+    expect(parser.parse(britain).header.army).toBe('Army B');
+  });
+
+  it('selects the side named on the loaded turn when the areas are reversed', () => {
+    const text = readFileSync(resolve(process.cwd(), '../348B0009_2.txt'), 'utf8');
+    const battle = parser.parse(text);
+
+    expect(battle.header.state).toBe('Conf. of the Rhine');
+    expect(battle.deploymentAreaA).toBe('France');
+    expect(battle.deploymentAreaB).toBe('Conf. of the Rhine');
+    expect(battle.header.army).toBe('Army B');
+  });
+
+  it('keeps a fortress on the line after main terrain for Army A', () => {
+    const warsaw = readFileSync(resolve(process.cwd(), '../124W0213.txt'), 'utf8');
+    const medium = warsaw.replace('Conf. of the Rhine has a large fortress', 'Duchy of Warsaw has a medium fortress');
+    expect(parser.parse(medium).battleBrief.fortress).toEqual({
+      ownerName: 'Duchy of Warsaw',
+      side: 'A',
+      size: 'medium',
+    });
   });
 
   it('rejects a turn file with no battlefield', () => {

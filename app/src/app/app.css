@@ -201,6 +201,12 @@
   gap: 6px;
 }
 
+.fortress-note {
+  color: #9eb0c8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .mini-action {
   padding: 1px 8px;
   font-size: 12px;
@@ -491,14 +497,27 @@ input[type='date'] {
   border-bottom: 1px solid #0f1723;
 }
 
+.cell.strategic::before,
 .cell.entrenched::before {
   content: '';
   position: absolute;
   inset: 0;
-  border: 3px solid #333;
+  z-index: 4;
   box-sizing: border-box;
   pointer-events: none;
-  z-index: 2;
+}
+
+.cell.strategic::before {
+  border: 2px solid #fff;
+}
+
+.cell.entrenched::before {
+  border: 3px solid #333;
+}
+
+.cell.strategic.entrenched::before {
+  border: 3px solid #333;
+  box-shadow: inset 0 0 0 2px #fff;
 }
 
 .map-grid.placing-entrenchment .cell {
@@ -636,10 +655,6 @@ input[type='date'] {
 
 .unit-card.army-b-chip.troop-artillery {
   background: #0d47a1;
-}
-
-.unit-card.on-strategic {
-  border: 2px solid #fff;
 }
 
 .unit-id {

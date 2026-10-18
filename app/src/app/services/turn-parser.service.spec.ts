@@ -48,7 +48,7 @@ describe('TurnParserService battlefield', () => {
     const armyB = battle.armies.find((army) => army.side === 'B');
     expect(armyA?.name).toBe('Conf. of the Rhine');
     expect(armyB?.name).toBe('Duchy of Warsaw');
-    expect(armyA?.units[0]).toMatchObject({ id: 1, troopCode: 'Fu', start: null });
+    expect(armyA?.units[0]).toMatchObject({ id: 1, troopCode: 'Fu', effectiveness: 8.2, start: null });
     expect(armyA?.units.some((unit) => unit.troopCode === 'GR')).toBe(true);
     expect(armyA?.units.some((unit) => unit.troopCode === 'La')).toBe(true);
     expect(armyB?.units[0]).toMatchObject({ id: 1, troopCode: 'Gc', start: null });
@@ -69,6 +69,11 @@ describe('TurnParserService battlefield', () => {
     expect(battle.battleBrief.deploymentAreaB.maxFederations).toBe(78);
     expect(battle.mapCells).toHaveLength(45 * 40);
     expect(battle.mapCells[0]?.token).toBe('.2');
+    const denmark = battle.armies.find((army) => army.side === 'A');
+    expect(denmark?.units.find((unit) => unit.id === 1)).toMatchObject({ troopCode: 'GR', effectiveness: 8 });
+    expect(denmark?.units.find((unit) => unit.id === 9)?.effectiveness).toBe(8.5);
+    expect(denmark?.units.find((unit) => unit.id === 10)?.effectiveness).toBe(8.7);
+    expect(denmark?.units.find((unit) => unit.id === 22)?.effectiveness).toBe(9.2);
   });
 
   it('selects Army B when the state is deployment area B under a shorter name', () => {

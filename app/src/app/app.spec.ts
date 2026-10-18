@@ -18,6 +18,29 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
+  it('toggles Ty between the troop code and a rounded effectiveness', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      selectChipMode(mode: 'fedType'): void;
+      chipText(unit: { id: number; troopCode: string; effectiveness: number | null }): string;
+      selectedArmy: { units: Array<{ id: number; troopCode: string; effectiveness: number | null }> } | null;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const unit = app.selectedArmy?.units.find((item) => item.id === 9);
+    const whole = app.selectedArmy?.units.find((item) => item.id === 1);
+    expect(unit?.effectiveness).toBe(8.5);
+    expect(app.chipText(unit!)).toBe('GR');
+    expect(app.chipText(whole!)).toBe('GR');
+    app.selectChipMode('fedType');
+    expect(app.chipText(unit!)).toBe('GR 9');
+    expect(app.chipText(whole!)).toBe('GR 8');
+    app.selectChipMode('fedType');
+    expect(app.chipText(unit!)).toBe('GR');
+  });
+
   it('should render the load button before a turn is opened', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();

@@ -19,6 +19,20 @@
       </div>
     </div>
   }
+  @if (turnLoadChoice) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="alertdialog" aria-label="Load turn">
+        <p>Choose how to load this turn.</p>
+        @for (name of turnLoadChoice.simFiles; track name) {
+          <button type="button" class="sim-choice" (click)="confirmTurnSim(name)">{{ name }}</button>
+        }
+        @if (turnLoadChoice.hasDraft) {
+          <button type="button" class="sim-choice" (click)="restoreTurnDraft()">Restore last draft</button>
+        }
+        <button type="button" class="sim-choice" (click)="declineTurnSim()">Load turn only</button>
+      </div>
+    </div>
+  }
   @if (simFileChoices) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="Choose a SIM sheet">
@@ -256,7 +270,7 @@
                     [attr.aria-checked]="chipDisplayMode === mode.value"
                     [class.active]="chipDisplayMode === mode.value"
                     [class.has-values]="chipModeHasValues(mode.value)"
-                    [title]="mode.label"
+                    [title]="mode.value === 'fedType' && showFedEffectiveness ? 'Fed type and EF' : mode.label"
                     (click)="selectChipMode(mode.value)"
                   >{{ mode.short }}</button>
                 }

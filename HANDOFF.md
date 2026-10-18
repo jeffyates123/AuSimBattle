@@ -26,7 +26,7 @@ The app is zoneless (no `zone.js`). After `await file.text()` and the other file
 ## What the screen does
 
 1. First open shows **Austerlitz Simulated Battle Planner** and **Load New Turn**. There is no paste box.
-2. **Load New Turn** opens a `.txt` file picker. A valid file hides the empty state. An invalid file clears the turn and shows the error.
+2. **Load New Turn** opens a `.txt` file picker. A valid file hides the empty state. An invalid file clears the turn and shows the error. The new turn is shown from the file only. If a matching SIM sheet or a browser draft exists, a dialog offers three kinds of choice: each matching SIM sheet, **Restore last draft** when a draft exists, and **Load turn only**. Choosing a sheet opens it. **Restore last draft** puts that draft back. **Load turn only** leaves the turn file as loaded. If neither a sheet nor a draft exists, the turn file is shown with no dialog.
 3. The title bar then has the army dropdown, the opponent line, **Load New Turn**, **Save SIM**, and **Load SIM**.
 4. **Header** and **Deploy** tabs sit under that bar. **Hide Feds**, **Set-Up Area** / **Battle field**, and **Clear All** stay on both tabs.
 5. The battlefield is always under the sheet panel.
@@ -74,7 +74,7 @@ Label alignment, which should be kept:
 
 ### Deploy
 
-The palette lists unplaced federations for the selected army, ordered by id. Two rows of buttons above the map title control every own chip. Loading a turn selects **Ty**, so chips show the troop code and stay on their deployment cells.
+The palette lists unplaced federations for the selected army, ordered by id. Two rows of buttons above the map title control every own chip. Loading a turn selects **Ty**, so chips show the troop code and stay on their deployment cells. Clicking **Ty** again adds the federation effectiveness from the turn’s battalion-group line, rounded to a whole number, as in `GR 8` or `La 4`. Another click returns to the troop code.
 
 | Row | Buttons |
 | --- | --- |
@@ -83,7 +83,7 @@ The palette lists unplaced federations for the selected army, ordered by id. Two
 
 **XY**, **D1**, **D2**, **AD1**, and **AD2** only move a federation that has that coordinate in its loaded order row. **XY** uses the order-row start x/y. The destination buttons use that destination. A federation with no coordinate for the selected button stays on its deployment cell. These buttons leave the chip text unchanged. Every other button only changes the text on the chip and leaves the chips on their deployment cells. Enemy chips always show the troop code. Formation `0` stays `0`; other codes show the formation name when it is known.
 
-While a coordinate button is selected, drag and click-to-place are off. Several own chips may share one coordinate; they split that cell. Deployment placement is still one federation per cell.
+**Ty** and **XY** are the setup views: drag a chip onto the setup zone, or select one and click the zone. **XY** also writes that cell into the order-row start coordinate, so the chip stays where it was dropped. **D1**, **D2**, **AD1**, and **AD2** only preview those destinations. Several own chips may share one coordinate; they split that cell. Deployment placement is still one federation per cell.
 
 - Drag a chip onto the setup zone, or click a chip and then click the map. After a click-place, the next higher unplaced id is armed. Clicking a chip on the map selects that federation.
 - Right-click a placed chip, or drag it back to the palette, to return it.
@@ -115,7 +115,7 @@ Switching army reloads that side’s draft.
 
 ### Armies
 
-`Battalion Groups of {nation}` is matched to the deployment-area name. Page-break lines (`Page`, `AUSTERLITZ`, `Simulated battle No.`, `Fe Type`) are skipped. Each entry is `id` plus a two-letter type, from a line such as `12 Ln 3`. `start` is always null, so every federation begins in the tray. Enemy chips appear only when a unit has a start inside its setup zone, which the turn text does not supply.
+`Battalion Groups of {nation}` is matched to the deployment-area name. Page-break lines (`Page`, `AUSTERLITZ`, `Simulated battle No.`, `Fe Type`) are skipped. Each entry is `id`, a two-letter type, four battalion pairs, and an effectiveness such as `8,5`. The effectiveness is kept on the federation and rounded only when **Ty** shows it. `start` is always null, so every federation begins in the tray. Enemy chips appear only when a unit has a start inside its setup zone, which the turn text does not supply.
 
 ## Rules data
 

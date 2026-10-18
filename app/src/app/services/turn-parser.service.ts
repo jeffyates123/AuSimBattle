@@ -301,14 +301,16 @@ export class TurnParserService {
           continue;
         }
 
-        const entryRegex = /(\d+)\s+([A-Za-z]{2})\s+\d+/g;
+        const entryRegex = /(\d+)\s+([A-Za-z]{2})(?:\s+(?:\d+\s+\d+\s+){4}(\d+),(\d+))?/g;
         let match = entryRegex.exec(trimmed);
         while (match) {
           const id = Number(match[1]);
           if (!units.has(id)) {
+            const effectiveness = match[3] === undefined ? null : Number(`${match[3]}.${match[4]}`);
             units.set(id, {
               id,
               troopCode: match[2],
+              effectiveness: Number.isFinite(effectiveness) ? effectiveness : null,
               formationCode: null,
               men: null,
               morale: null,

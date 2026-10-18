@@ -28,6 +28,7 @@ export interface SetupZone {
 export interface FederationUnit {
   id: number;
   troopCode: string;
+  effectiveness: number | null;
   formationCode: number | null;
   men: number | null;
   morale: number | null;

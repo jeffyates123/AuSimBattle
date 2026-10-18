@@ -70,11 +70,13 @@ export class App {
   protected missingSimWarning: string | null = null;
   protected savePrompt: { fileName: string; nextName: string } | null = null;
   protected simFileChoices: string[] | null = null;
+  protected turnLoadChoice: { simFiles: string[]; hasDraft: boolean } | null = null;
   protected clearAllPrompt = false;
   protected statusMessage = '';
   protected sheetView: 'header' | 'deploy' = 'header';
   protected chipDisplayMode: (typeof this.chipDisplayModes)[number]['value'] = 'fedType';
   protected chipLabelMode: ChipLabelMode = 'fedType';
+  protected showFedEffectiveness = false;
   protected mapZoomed = false;
   protected fedsHidden = false;
   protected awaitingEntrenchment = false;
@@ -158,6 +160,7 @@ export class App {
     this.parseError = '';
     this.exportError = '';
     this.statusMessage = '';
+    this.turnLoadChoice = null;
     this.chipIndexKey = '';
     this.chipsByCell.clear();
     this.changeDetector.markForCheck();
@@ -172,6 +175,7 @@ export class App {
         return;
       }
       this.parseTurnText(text);
+      await this.offerMatchingSim(generation);
     } catch (error) {
       if (generation !== this.turnLoadGeneration) {
         return;
@@ -207,7 +211,7 @@ export class App {
     this.saveDraftNow();
   }
 
-  protected pickArmy(side: ArmySide): void {
+  protected pickArmy(side: ArmySide, options?: { restoreDraft?: boolean; saveDraft?: boolean }): void {
     if (!this.parsedTurn || !this.header) {
       return;
     }
@@ -234,9 +238,13 @@ export class App {
       }
     });
 
-    this.tryRestoreDraft();
+    if (options?.restoreDraft !== false) {
+      this.tryRestoreDraft();
+    }
     this.rebuildOccupancyMaps();
-    this.autoSaveDraft();
+    if (options?.saveDraft !== false) {
+      this.autoSaveDraft();
+    }
   }
 
   protected onUnitDragStart(event: DragEvent, unitId: number): void {
@@ -260,7 +268,7 @@ export class App {
   protected onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
     event.stopPropagation();
     this.selectFederation(unitId, kind);
-    if (kind === 'own' && !this.viewingOrderPositions() && event.detail >= 2 && performance.now() - this.armedClickAt > 500) {
+    if (kind === 'own' && this.setupEditingEnabled() && event.detail >= 2 && performance.now() - this.armedClickAt > 500) {
       this.returnToPool(unitId);
     }
   }
@@ -320,7 +328,7 @@ export class App {
 
   protected onCellDrop(event: DragEvent, x: number, y: number): void {
     event.preventDefault();
-    if (this.viewingOrderPositions()) {
+    if (!this.setupEditingEnabled()) {
       return;
     }
     this.lastDropAt = performance.now();
@@ -339,10 +347,10 @@ export class App {
       }
       this.awaitingEntrenchment = false;
     }
-    if (this.viewingOrderPositions()) {
+    if (!this.setupEditingEnabled()) {
       return;
     }
-    const own = this.ownByCoord.get(this.coordKey(x, y));
+    const own = this.ownSetupUnitAt(x, y);
     if (event.detail >= 2 && own) {
       if (performance.now() - this.armedClickAt > 500) {
         this.returnToPool(own.id);
@@ -361,10 +369,10 @@ export class App {
     if (this.clearEntrenchmentAt(x, y)) {
       return;
     }
-    if (this.viewingOrderPositions()) {
+    if (!this.setupEditingEnabled()) {
       return;
     }
-    const own = this.ownByCoord.get(this.coordKey(x, y));
+    const own = this.ownSetupUnitAt(x, y);
     if (!own) {
       return;
     }
@@ -430,7 +438,7 @@ export class App {
 
   protected onTrayDrop(event: DragEvent): void {
     event.preventDefault();
-    if (this.viewingOrderPositions()) {
+    if (!this.setupEditingEnabled()) {
       return;
     }
     const unitId = Number(event.dataTransfer?.getData('text/plain') ?? '');
@@ -537,6 +545,58 @@ export class App {
       this.loadingSim = false;
       this.changeDetector.markForCheck();
     }
+  }
+
+  protected async confirmTurnSim(fileName: string): Promise<void> {
+    this.turnLoadChoice = null;
+    await this.loadChosenSim(fileName);
+  }
+
+  protected restoreTurnDraft(): void {
+    this.turnLoadChoice = null;
+    this.applyStoredDraft();
+  }
+
+  protected declineTurnSim(): void {
+    this.turnLoadChoice = null;
+  }
+
+  private async offerMatchingSim(generation: number): Promise<void> {
+    if (!this.header || generation !== this.turnLoadGeneration) {
+      return;
+    }
+    let names: string[] = [];
+    try {
+      names = await this.excelExport.matchingFileNames(this.header);
+    } catch (error) {
+      if (generation !== this.turnLoadGeneration) {
+        return;
+      }
+      this.exportError = error instanceof Error ? error.message : 'Unable to look for a SIM sheet.';
+    }
+    if (generation !== this.turnLoadGeneration) {
+      return;
+    }
+    const hasDraft = this.storedDraftExists();
+    if (names.length === 0 && !hasDraft) {
+      return;
+    }
+    this.turnLoadChoice = { simFiles: names, hasDraft };
+  }
+
+  private storedDraftExists(): boolean {
+    if (!this.header || !this.selectedArmySide) {
+      return false;
+    }
+    const gameId = this.header.gameId ?? 'unknown';
+    const sim = this.header.simulationNumber ?? 0;
+    return this.draft.load(gameId, sim, this.selectedArmySide) !== null;
+  }
+
+  private applyStoredDraft(): void {
+    this.tryRestoreDraft();
+    this.rebuildOccupancyMaps();
+    this.autoSaveDraft();
   }
 
   protected async loadChosenSim(fileName: string): Promise<void> {
@@ -656,11 +716,47 @@ export class App {
   }
 
   protected chipDragEnabled(unit: FederationUnit): boolean {
-    return !this.overlayCoordinate(unit);
+    return this.setupEditingEnabled() && this.isOwnUnit(unit);
+  }
+
+  private setupEditingEnabled(): boolean {
+    const source = this.positionSource();
+    return source === 'deployment' || source === 'start';
   }
 
   private viewingOrderPositions(): boolean {
     return this.positionSource() !== 'deployment';
+  }
+
+  private ownSetupUnitAt(x: number, y: number): FederationUnit | undefined {
+    if (!this.selectedArmy) {
+      return undefined;
+    }
+    if (!this.viewingOrderPositions()) {
+      return this.ownByCoord.get(this.coordKey(x, y));
+    }
+    if (this.highlightedFederationKind === 'own' && this.highlightedFederationId !== null) {
+      const highlighted = this.selectedArmy.units.find((unit) => unit.id === this.highlightedFederationId);
+      const highlightedCoord = highlighted ? this.displayedOwnCoordinate(highlighted) : null;
+      if (highlightedCoord?.x === x && highlightedCoord.y === y) {
+        return highlighted;
+      }
+    }
+    return this.selectedArmy.units.find((unit) => {
+      const coord = this.displayedOwnCoordinate(unit);
+      return coord?.x === x && coord.y === y;
+    });
+  }
+
+  private syncSetupCoordinate(unitId: number, coord: Coordinate | null): void {
+    if (this.positionSource() !== 'start') {
+      return;
+    }
+    const orderRow = this.orderRowFor(unitId);
+    if (!orderRow) {
+      return;
+    }
+    orderRow.start = coord ? { x: coord.x, y: coord.y } : { x: null, y: null };
   }
 
   private positionSource(): 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | 'deployment' {
@@ -917,6 +1013,11 @@ export class App {
   }
 
   protected selectChipMode(mode: (typeof this.chipDisplayModes)[number]['value']): void {
+    if (mode === 'fedType' && this.chipDisplayMode === 'fedType') {
+      this.showFedEffectiveness = !this.showFedEffectiveness;
+    } else {
+      this.showFedEffectiveness = false;
+    }
     if (
       mode !== 'xy' &&
       mode !== 'destination1' &&
@@ -931,7 +1032,7 @@ export class App {
 
   protected chipText(unit: FederationUnit): string {
     if (!this.isOwnUnit(unit) || this.chipLabelMode === 'fedType') {
-      return unit.troopCode;
+      return this.fedTypeLabel(unit);
     }
     if (this.chipLabelMode === 'fedNo') {
       return String(unit.id);
@@ -960,6 +1061,13 @@ export class App {
       case 'altFormation':
         return this.displayFormation(orderRow.alternative.formation);
     }
+  }
+
+  private fedTypeLabel(unit: FederationUnit): string {
+    if (!this.showFedEffectiveness || unit.effectiveness === null) {
+      return unit.troopCode;
+    }
+    return `${unit.troopCode} ${Math.round(unit.effectiveness)}`;
   }
 
   protected onStrategicPoint(x: number, y: number): boolean {
@@ -1047,6 +1155,7 @@ export class App {
       return;
     }
     this.placements.delete(unitId);
+    this.syncSetupCoordinate(unitId, null);
     this.rebuildOccupancyMaps();
     this.statusMessage = `Federation ${unitId} moved back to tray.`;
     this.autoSaveDraft();
@@ -1085,8 +1194,10 @@ export class App {
     if (occupant) {
       if (source) {
         this.placements.set(occupant.id, source);
+        this.syncSetupCoordinate(occupant.id, source);
       } else {
         this.placements.delete(occupant.id);
+        this.syncSetupCoordinate(occupant.id, null);
       }
       this.statusMessage = `Swapped federation ${unitId} with ${occupant.id}.`;
     } else {
@@ -1094,6 +1205,7 @@ export class App {
     }
 
     this.placements.set(unitId, { x, y });
+    this.syncSetupCoordinate(unitId, { x, y });
     this.highlightFollowing(unitId);
     this.rebuildOccupancyMaps();
     this.autoSaveDraft();
@@ -1443,8 +1555,9 @@ export class App {
     this.chipsByCell.clear();
     this.chipDisplayMode = 'fedType';
     this.chipLabelMode = 'fedType';
+    this.showFedEffectiveness = false;
     if (this.parsedTurn.armies.length) {
-      this.pickArmy(preferredArmySide);
+      this.pickArmy(preferredArmySide, { restoreDraft: false, saveDraft: false });
       return;
     }
     this.statusMessage = `Turn parsed. Army ${preferredArmySide} selected.`;

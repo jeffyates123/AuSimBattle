@@ -41,7 +41,7 @@
   @if (clearAllPrompt) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="Clear all federations">
-        <p>Are you sure you want to clear all federations from the battlefield?</p>
+        <p>Are you sure you want to clear all federations from the battlefield and clear their orders?</p>
         <div class="warning-actions">
           <button type="button" (click)="confirmClearAll()">Clear All</button>
           <button type="button" (click)="clearAllPrompt = false">Cancel</button>
@@ -114,6 +114,9 @@
               aria-controls="deploy-panel"
               (click)="sheetView = 'deploy'"
             >Deploy</button>
+            @if (selectedArmy && parsedTurn.armies.length) {
+              <span class="placed-count">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
+            }
           </div>
           @if (selectedArmy && parsedTurn.armies.length) {
             <button
@@ -128,7 +131,7 @@
               <button type="button" class="paired-action" (click)="toggleFedsHidden()">
                 {{ fedsHidden ? 'Show Feds' : 'Hide Feds' }}
               </button>
-              <button type="button" class="paired-action" (click)="toggleMapZoom()">{{ mapZoomed ? 'Zoom-Out' : 'Zoom-In' }}</button>
+              <button type="button" class="paired-action" (click)="toggleMapZoom()">{{ isMapZoomed() ? 'Zoom-Out' : 'Zoom-In' }}</button>
               <button type="button" class="paired-action" (click)="askClearAll()">Clear All</button>
             </div>
           }
@@ -227,8 +230,7 @@
                 (click)="onPaletteUnitClick(unit.id)"
                 [title]="'Federation ' + unit.id"
               >
-                <span class="unit-id">{{ unit.id }}</span>
-                <span class="unit-type">{{ unit.troopCode }}</span>
+                <span class="chip-text" [class.wide]="chipText(unit).length > 3">{{ chipText(unit) }}</span>
               </div>
             }
           </div>
@@ -243,9 +245,24 @@
   @if (rows.length) {
     <section class="map panel">
       <div class="map-heading">
-        @if (selectedArmy && parsedTurn?.armies?.length) {
-          <span class="sheet-meta map-placed">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
-        }
+        <div class="chip-display-picker" role="radiogroup" aria-label="Federation chip display mode">
+          @for (row of [1, 2]; track row) {
+            <div class="chip-display-row">
+              @for (mode of chipDisplayModes; track mode.value) {
+                @if (mode.row === row) {
+                  <button
+                    type="button"
+                    role="radio"
+                    [attr.aria-checked]="chipDisplayMode === mode.value"
+                    [class.active]="chipDisplayMode === mode.value"
+                    [title]="mode.label"
+                    (click)="selectChipMode(mode.value)"
+                  >{{ mode.short }}</button>
+                }
+              }
+            </div>
+          }
+        </div>
         <h2>The Battle field</h2>
         <span class="sheet-meta">
           <span>{{ deploymentAreaLabel() }}</span>
@@ -281,25 +298,31 @@
               (click)="onCellClick($event, cell.x, cell.y)"
               (contextmenu)="onCellContextMenu($event, cell.x, cell.y)"
             >
-              @if (getOccupant(cell.x, cell.y); as occupant) {
-                <div
-                  class="unit-card"
-                  [class.own]="occupant.kind === 'own'"
-                  [class.enemy]="occupant.kind === 'enemy'"
-                  [class.army-a-chip]="occupant.kind === 'own' ? selectedArmySide === 'A' : selectedArmySide === 'B'"
-                  [class.army-b-chip]="occupant.kind === 'own' ? selectedArmySide === 'B' : selectedArmySide === 'A'"
-                  [class.troop-infantry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'infantry'"
-                  [class.troop-cavalry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'cavalry'"
-                  [class.troop-artillery]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'artillery'"
-                  [attr.draggable]="occupant.kind === 'own'"
-                  (dragstart)="occupant.kind === 'own' && onUnitDragStart($event, occupant.unit.id)"
-                  [title]="'Federation ' + occupant.unit.id"
-                >
-                  <span class="unit-id">{{ occupant.unit.id }}</span>
-                  <span class="unit-type">{{ occupant.unit.troopCode }}</span>
-                </div>
-              } @else {
-                <span class="glyph" [class.light]="glyphIsLight(cell.height)">{{ cellLabel(cell) }}</span>
+              @if (cellChips(cell.x, cell.y); as chips) {
+                @if (chips.length) {
+                  <div class="cell-chips" [class.stacked]="chips.length > 1">
+                    @for (occupant of chips; track occupant.unit.id) {
+                      <div
+                        class="unit-card"
+                        [class.own]="occupant.kind === 'own'"
+                        [class.enemy]="occupant.kind === 'enemy'"
+                        [class.fixed]="occupant.kind !== 'own' || !chipDragEnabled(occupant.unit)"
+                        [class.army-a-chip]="occupant.kind === 'own' ? selectedArmySide === 'A' : selectedArmySide === 'B'"
+                        [class.army-b-chip]="occupant.kind === 'own' ? selectedArmySide === 'B' : selectedArmySide === 'A'"
+                        [class.troop-infantry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'infantry'"
+                        [class.troop-cavalry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'cavalry'"
+                        [class.troop-artillery]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'artillery'"
+                        [attr.draggable]="occupant.kind === 'own' && chipDragEnabled(occupant.unit)"
+                        (dragstart)="occupant.kind === 'own' && chipDragEnabled(occupant.unit) && onUnitDragStart($event, occupant.unit.id)"
+                        [title]="'Federation ' + occupant.unit.id"
+                      >
+                        <span class="chip-text" [class.wide]="chipText(occupant.unit).length > 3">{{ chipText(occupant.unit) }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <span class="glyph" [class.light]="glyphIsLight(cell.height)">{{ cellLabel(cell) }}</span>
+                }
               }
             </div>
           }

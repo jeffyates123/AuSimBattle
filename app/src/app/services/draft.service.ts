@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
-import { BattleHeader } from '../models/battle';
+import { BattleHeader, FederationOrder } from '../models/battle';
 import { ArmySide, Coordinate } from '../models/turn';
 
 export interface SetupDraft {
   header: BattleHeader;
   placements: Record<number, Coordinate>;
   fortressEntrenchments?: Array<{ x: number | null; y: number | null }>;
+  federationOrders?: Record<number, FederationOrder>;
 }
 
 @Injectable({ providedIn: 'root' })

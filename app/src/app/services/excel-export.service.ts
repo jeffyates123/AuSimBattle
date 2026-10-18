@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
-import { BattleHeader } from '../models/battle';
+import { BattleHeader, FederationOrder } from '../models/battle';
 import { ArmySide, Coordinate } from '../models/turn';
 
 export interface SimSheetPlacement {
@@ -15,6 +15,7 @@ export interface SimSheetSetup {
   generalFederation: number | null;
   processDate: string | null;
   placements: SimSheetPlacement[];
+  federationOrders: FederationOrder[];
   fortressEntrenchments: Array<{ x: number | null; y: number | null }>;
 }
 
@@ -26,6 +27,7 @@ export class ExcelExportService {
     header: BattleHeader,
     army: ArmySide,
     placements: Map<number, Coordinate>,
+    federationOrders: Map<number, FederationOrder>,
     fortressEntrenchments: Array<{ x: number | null; y: number | null }> = [],
     downloadName?: string,
   ): Promise<void> {
@@ -33,7 +35,14 @@ export class ExcelExportService {
     if (!template.ok) {
       throw new Error('The SIM sheet template could not be loaded.');
     }
-    const out = await this.fillTemplate(await template.arrayBuffer(), header, army, placements, fortressEntrenchments);
+    const out = await this.fillTemplate(
+      await template.arrayBuffer(),
+      header,
+      army,
+      placements,
+      federationOrders,
+      fortressEntrenchments,
+    );
     const fileName = downloadName ?? this.fileName(header);
     this.rememberWorkbook(fileName, out);
     const blob = new Blob([out], {
@@ -47,6 +56,7 @@ export class ExcelExportService {
     header: BattleHeader,
     army: ArmySide,
     placements: Map<number, Coordinate>,
+    federationOrders: Map<number, FederationOrder>,
     fortressEntrenchments: Array<{ x: number | null; y: number | null }> = [],
   ): Promise<ArrayBuffer> {
     const zip = await JSZip.loadAsync(template);
@@ -58,6 +68,7 @@ export class ExcelExportService {
     let sheetXml = await sheetFile.async('string');
     sheetXml = this.writeHeaderXml(sheetXml, header, army);
     sheetXml = this.writeFortressXml(sheetXml, fortressEntrenchments);
+    sheetXml = this.writeFederationOrdersXml(sheetXml, federationOrders);
     sheetXml = this.writePlacementsXml(sheetXml, placements);
     zip.file('xl/worksheets/sheet1.xml', sheetXml);
     return zip.generateAsync({ type: 'arraybuffer' });
@@ -72,10 +83,15 @@ export class ExcelExportService {
     }
 
     const placements: SimSheetPlacement[] = [];
+    const federationOrders: FederationOrder[] = [];
     for (let row = 13; row <= 122; row += 1) {
       const id = this.cellNumber(sheet.getCell(`B${row}`).value);
       if (id === null) {
         continue;
+      }
+      const orderRow = this.readFederationOrderRow(sheet, row, id);
+      if (this.hasFederationOrderData(orderRow)) {
+        federationOrders.push(orderRow);
       }
       const x = this.cellNumber(sheet.getCell(`D${row}`).value);
       const y = this.cellNumber(sheet.getCell(`E${row}`).value);
@@ -90,8 +106,72 @@ export class ExcelExportService {
       generalFederation: this.cellNumber(sheet.getCell('R3').value),
       processDate: this.cellDate(sheet.getCell('L4').value),
       placements,
+      federationOrders,
       fortressEntrenchments: this.readFortress(sheet),
     };
+  }
+
+  private readFederationOrderRow(sheet: ExcelJS.Worksheet, row: number, id: number): FederationOrder {
+    return {
+      federation: id,
+      battalionGroup: this.cellNumber(sheet.getCell(`C${row}`).value),
+      start: {
+        x: this.cellNumber(sheet.getCell(`D${row}`).value),
+        y: this.cellNumber(sheet.getCell(`E${row}`).value),
+      },
+      primary: {
+        startAttack: this.cellNumber(sheet.getCell(`F${row}`).value),
+        order: this.cellNumber(sheet.getCell(`G${row}`).value),
+        additionalOrder: this.cellNumber(sheet.getCell(`H${row}`).value),
+        formation: this.cellNumber(sheet.getCell(`I${row}`).value),
+        destination1: {
+          x: this.cellNumber(sheet.getCell(`J${row}`).value),
+          y: this.cellNumber(sheet.getCell(`K${row}`).value),
+        },
+        destination2: {
+          x: this.cellNumber(sheet.getCell(`L${row}`).value),
+          y: this.cellNumber(sheet.getCell(`M${row}`).value),
+        },
+      },
+      alternative: {
+        condition: this.cellNumber(sheet.getCell(`N${row}`).value),
+        order: this.cellNumber(sheet.getCell(`O${row}`).value),
+        additionalOrder: this.cellNumber(sheet.getCell(`P${row}`).value),
+        formation: this.cellNumber(sheet.getCell(`Q${row}`).value),
+        destination1: {
+          x: this.cellNumber(sheet.getCell(`R${row}`).value),
+          y: this.cellNumber(sheet.getCell(`S${row}`).value),
+        },
+        destination2: {
+          x: this.cellNumber(sheet.getCell(`T${row}`).value),
+          y: this.cellNumber(sheet.getCell(`U${row}`).value),
+        },
+      },
+    };
+  }
+
+  private hasFederationOrderData(orderRow: FederationOrder): boolean {
+    return (
+      orderRow.battalionGroup !== null ||
+      orderRow.start.x !== null ||
+      orderRow.start.y !== null ||
+      orderRow.primary.startAttack !== null ||
+      orderRow.primary.order !== null ||
+      orderRow.primary.additionalOrder !== null ||
+      orderRow.primary.formation !== null ||
+      orderRow.primary.destination1.x !== null ||
+      orderRow.primary.destination1.y !== null ||
+      orderRow.primary.destination2.x !== null ||
+      orderRow.primary.destination2.y !== null ||
+      orderRow.alternative.condition !== null ||
+      orderRow.alternative.order !== null ||
+      orderRow.alternative.additionalOrder !== null ||
+      orderRow.alternative.formation !== null ||
+      orderRow.alternative.destination1.x !== null ||
+      orderRow.alternative.destination1.y !== null ||
+      orderRow.alternative.destination2.x !== null ||
+      orderRow.alternative.destination2.y !== null
+    );
   }
 
   private readFortress(sheet: ExcelJS.Worksheet): Array<{ x: number | null; y: number | null }> {
@@ -155,6 +235,34 @@ export class ExcelExportService {
       const row = 12 + id;
       xml = this.setNumberCell(xml, `D${row}`, coord.x);
       xml = this.setNumberCell(xml, `E${row}`, coord.y);
+    });
+    return xml;
+  }
+
+  private writeFederationOrdersXml(sheetXml: string, federationOrders: Map<number, FederationOrder>): string {
+    let xml = sheetXml;
+    federationOrders.forEach((orderRow, id) => {
+      if (id < 1 || id > 110) {
+        return;
+      }
+      const row = 12 + id;
+      xml = this.setNumberCell(xml, `C${row}`, orderRow.battalionGroup);
+      xml = this.setNumberCell(xml, `F${row}`, orderRow.primary.startAttack);
+      xml = this.setNumberCell(xml, `G${row}`, orderRow.primary.order);
+      xml = this.setNumberCell(xml, `H${row}`, orderRow.primary.additionalOrder);
+      xml = this.setNumberCell(xml, `I${row}`, orderRow.primary.formation);
+      xml = this.setNumberCell(xml, `J${row}`, orderRow.primary.destination1.x);
+      xml = this.setNumberCell(xml, `K${row}`, orderRow.primary.destination1.y);
+      xml = this.setNumberCell(xml, `L${row}`, orderRow.primary.destination2.x);
+      xml = this.setNumberCell(xml, `M${row}`, orderRow.primary.destination2.y);
+      xml = this.setNumberCell(xml, `N${row}`, orderRow.alternative.condition);
+      xml = this.setNumberCell(xml, `O${row}`, orderRow.alternative.order);
+      xml = this.setNumberCell(xml, `P${row}`, orderRow.alternative.additionalOrder);
+      xml = this.setNumberCell(xml, `Q${row}`, orderRow.alternative.formation);
+      xml = this.setNumberCell(xml, `R${row}`, orderRow.alternative.destination1.x);
+      xml = this.setNumberCell(xml, `S${row}`, orderRow.alternative.destination1.y);
+      xml = this.setNumberCell(xml, `T${row}`, orderRow.alternative.destination2.x);
+      xml = this.setNumberCell(xml, `U${row}`, orderRow.alternative.destination2.y);
     });
     return xml;
   }

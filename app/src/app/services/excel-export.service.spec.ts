@@ -79,6 +79,17 @@ describe('ExcelExportService.readSetup', () => {
     sheet.getCell('B14').value = 9;
     sheet.getCell('D14').value = 19;
     sheet.getCell('E14').value = 34;
+    sheet.getCell('C13').value = 1;
+    sheet.getCell('F13').value = 0;
+    sheet.getCell('G13').value = 33;
+    sheet.getCell('H13').value = 0;
+    sheet.getCell('I13').value = 2;
+    sheet.getCell('J13').value = 12;
+    sheet.getCell('K13').value = 39;
+    sheet.getCell('N13').value = 30;
+    sheet.getCell('O13').value = 21;
+    sheet.getCell('P13').value = 4;
+    sheet.getCell('Q13').value = 3;
 
     const data = await workbook.xlsx.writeBuffer();
     const setup = await service.readSetup(data as ArrayBuffer);
@@ -90,6 +101,25 @@ describe('ExcelExportService.readSetup', () => {
       { id: 4, x: 18, y: 33 },
       { id: 9, x: 19, y: 34 },
     ]);
+    expect(setup.federationOrders).toContainEqual(
+      expect.objectContaining({
+        federation: 4,
+        battalionGroup: 1,
+        primary: expect.objectContaining({
+          startAttack: 0,
+          order: 33,
+          additionalOrder: 0,
+          formation: 2,
+          destination1: { x: 12, y: 39 },
+        }),
+        alternative: expect.objectContaining({
+          condition: 30,
+          order: 21,
+          additionalOrder: 4,
+          formation: 3,
+        }),
+      }),
+    );
     expect(setup.fortressEntrenchments).toEqual(Array.from({ length: 10 }, () => ({ x: null, y: null })));
   });
 
@@ -111,14 +141,47 @@ describe('ExcelExportService.readSetup', () => {
       [56, { x: 20, y: 4 }],
     ]);
 
-    const filled = await service.fillTemplate(template.buffer.slice(template.byteOffset, template.byteOffset + template.byteLength), header, 'A', placements, [
-      { x: 12, y: 3 },
-      { x: null, y: null },
-      { x: null, y: null },
-      { x: null, y: null },
-      { x: null, y: null },
-      { x: 18, y: 8 },
+    const federationOrders = new Map([
+      [
+        1,
+        {
+          federation: 1,
+          battalionGroup: 1,
+          start: { x: 11, y: 1 },
+          primary: {
+            startAttack: 0,
+            order: 33,
+            additionalOrder: 0,
+            formation: 2,
+            destination1: { x: 12, y: 2 },
+            destination2: { x: null, y: null },
+          },
+          alternative: {
+            condition: 30,
+            order: 21,
+            additionalOrder: 6,
+            formation: 3,
+            destination1: { x: 13, y: 3 },
+            destination2: { x: null, y: null },
+          },
+        },
+      ],
     ]);
+    const filled = await service.fillTemplate(
+      template.buffer.slice(template.byteOffset, template.byteOffset + template.byteLength),
+      header,
+      'A',
+      placements,
+      federationOrders,
+      [
+        { x: 12, y: 3 },
+        { x: null, y: null },
+        { x: null, y: null },
+        { x: null, y: null },
+        { x: null, y: null },
+        { x: 18, y: 8 },
+      ],
+    );
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(filled);
     const sheet = workbook.getWorksheet('Sheet1');
@@ -130,8 +193,19 @@ describe('ExcelExportService.readSetup', () => {
     expect(sheet?.getCell('F4').value).toBe('CHRISTOS KARAS');
     expect(sheet?.getCell('R4').value).toBe('Army A');
     expect(sheet?.getCell('B13').value).toBe(1);
+    expect(sheet?.getCell('C13').value).toBe(1);
     expect(sheet?.getCell('D13').value).toBe(11);
     expect(sheet?.getCell('E13').value).toBe(1);
+    expect(sheet?.getCell('F13').value).toBe(0);
+    expect(sheet?.getCell('G13').value).toBe(33);
+    expect(sheet?.getCell('H13').value).toBe(0);
+    expect(sheet?.getCell('I13').value).toBe(2);
+    expect(sheet?.getCell('J13').value).toBe(12);
+    expect(sheet?.getCell('K13').value).toBe(2);
+    expect(sheet?.getCell('N13').value).toBe(30);
+    expect(sheet?.getCell('O13').value).toBe(21);
+    expect(sheet?.getCell('P13').value).toBe(6);
+    expect(sheet?.getCell('Q13').value).toBe(3);
     expect(sheet?.getCell('B68').value).toBe(56);
     expect(sheet?.getCell('D68').value).toBe(20);
     expect(sheet?.getCell('E68').value).toBe(4);
@@ -146,6 +220,18 @@ describe('ExcelExportService.readSetup', () => {
     expect(sheet?.getCell('L4').numFmt).toBe('mm-dd-yy');
     const loaded = await service.readSetup(filled);
     expect(loaded.processDate).toBe('2026-02-17');
+    expect(loaded.federationOrders).toContainEqual(
+      expect.objectContaining({
+        federation: 1,
+        battalionGroup: 1,
+        primary: expect.objectContaining({
+          startAttack: 0,
+          order: 33,
+          additionalOrder: 0,
+          formation: 2,
+        }),
+      }),
+    );
     expect(loaded.fortressEntrenchments[0]).toEqual({ x: 12, y: 3 });
     expect(loaded.fortressEntrenchments[1]).toEqual({ x: null, y: null });
     expect(loaded.fortressEntrenchments[5]).toEqual({ x: 18, y: 8 });

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BattleHeader } from './models/battle';
+import { BattleHeader, FederationOrder } from './models/battle';
 import {
   ArmyData,
   ArmySide,
@@ -16,6 +16,19 @@ import { ExcelExportService, SimSheetSetup } from './services/excel-export.servi
 import { RulesService } from './services/rules.service';
 import { TurnParserService } from './services/turn-parser.service';
 
+type ChipLabelMode =
+  | 'fedType'
+  | 'fedNo'
+  | 'battalionGroup'
+  | 'startAttack'
+  | 'order'
+  | 'additionalOrder'
+  | 'formation'
+  | 'altCondition'
+  | 'altOrder'
+  | 'altAdditionalOrder'
+  | 'altFormation';
+
 @Component({
   imports: [CommonModule, FormsModule],
   selector: 'app-root',
@@ -23,6 +36,23 @@ import { TurnParserService } from './services/turn-parser.service';
   templateUrl: './app.html',
 })
 export class App {
+  protected readonly chipDisplayModes = [
+    { value: 'fedType', label: 'Fed type', short: 'Ty', row: 1 },
+    { value: 'fedNo', label: 'Fed no', short: 'No', row: 1 },
+    { value: 'battalionGroup', label: 'Battalion Group', short: 'BG', row: 1 },
+    { value: 'startAttack', label: 'Start Attack', short: 'Start', row: 1 },
+    { value: 'order', label: 'Order', short: 'Ord', row: 1 },
+    { value: 'additionalOrder', label: 'Additional Order', short: 'Add', row: 1 },
+    { value: 'formation', label: 'Formation', short: 'Form', row: 1 },
+    { value: 'destination1', label: 'Destination 1', short: 'D1', row: 1 },
+    { value: 'destination2', label: 'Destination 2', short: 'D2', row: 1 },
+    { value: 'altCondition', label: 'Alt condition', short: 'ACond', row: 2 },
+    { value: 'altOrder', label: 'Alt order', short: 'AOrd', row: 2 },
+    { value: 'altAdditionalOrder', label: 'Alt additional order', short: 'AAdd', row: 2 },
+    { value: 'altFormation', label: 'Alt formation', short: 'AForm', row: 2 },
+    { value: 'altDestination1', label: 'Alt destination 1', short: 'AD1', row: 2 },
+    { value: 'altDestination2', label: 'Alt destination 2', short: 'AD2', row: 2 },
+  ] as const;
   protected readonly setupZones: Record<ArmySide, SetupZone> = {
     A: { minX: 11, maxX: 35, minY: 1, maxY: 10 },
     B: { minX: 11, maxX: 35, minY: 31, maxY: 40 },
@@ -42,6 +72,8 @@ export class App {
   protected clearAllPrompt = false;
   protected statusMessage = '';
   protected sheetView: 'header' | 'deploy' = 'header';
+  protected chipDisplayMode: (typeof this.chipDisplayModes)[number]['value'] = 'fedType';
+  protected chipLabelMode: ChipLabelMode = 'fedType';
   protected mapZoomed = false;
   protected fedsHidden = false;
   protected awaitingEntrenchment = false;
@@ -85,6 +117,7 @@ export class App {
   protected exporting = false;
   protected loadingSim = false;
   protected placements = new Map<number, Coordinate>();
+  protected federationOrders = new Map<number, FederationOrder>();
   protected highlightedFederationId: number | null = null;
   private lastDropAt = 0;
   private armedClickAt = 0;
@@ -92,6 +125,7 @@ export class App {
   protected rows: MapCell[][] = [];
   protected ownByCoord = new Map<string, FederationUnit>();
   protected enemyByCoord = new Map<string, FederationUnit>();
+  private readonly formationByCode = new Map<number, string>();
 
   constructor(
     private readonly parser: TurnParserService,
@@ -99,7 +133,11 @@ export class App {
     private readonly excelExport: ExcelExportService,
     private readonly rules: RulesService,
     private readonly changeDetector: ChangeDetectorRef,
-  ) {}
+  ) {
+    this.rules
+      .getSimBattleStore()
+      .orders.formationOrders.forEach((item) => this.formationByCode.set(item.code, item.formation));
+  }
 
   protected async onTurnFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
@@ -161,6 +199,7 @@ export class App {
     this.enemyArmy = enemy;
     this.header.army = side === 'A' ? 'Army A' : 'Army B';
     this.placements = new Map<number, Coordinate>();
+    this.federationOrders = new Map<number, FederationOrder>();
     this.highlightedFederationId = null;
     this.fortressEntrenchments = this.emptyFortressEntrenchments();
     this.awaitingEntrenchment = false;
@@ -204,6 +243,9 @@ export class App {
 
   protected onCellDrop(event: DragEvent, x: number, y: number): void {
     event.preventDefault();
+    if (this.viewingOrderPositions()) {
+      return;
+    }
     this.lastDropAt = performance.now();
     const unitId = Number(event.dataTransfer?.getData('text/plain') ?? '');
     this.placeFederation(unitId, x, y);
@@ -219,6 +261,9 @@ export class App {
         return;
       }
       this.awaitingEntrenchment = false;
+    }
+    if (this.viewingOrderPositions()) {
+      return;
     }
     const own = this.ownByCoord.get(this.coordKey(x, y));
     if (event.detail >= 2 && own) {
@@ -237,6 +282,9 @@ export class App {
   protected onCellContextMenu(event: MouseEvent, x: number, y: number): void {
     event.preventDefault();
     if (this.clearEntrenchmentAt(x, y)) {
+      return;
+    }
+    if (this.viewingOrderPositions()) {
       return;
     }
     const own = this.ownByCoord.get(this.coordKey(x, y));
@@ -305,6 +353,9 @@ export class App {
 
   protected onTrayDrop(event: DragEvent): void {
     event.preventDefault();
+    if (this.viewingOrderPositions()) {
+      return;
+    }
     const unitId = Number(event.dataTransfer?.getData('text/plain') ?? '');
     this.returnToPool(unitId);
   }
@@ -320,7 +371,7 @@ export class App {
     if (!this.selectedArmy) {
       return [];
     }
-    return this.selectedArmy.units.filter((unit) => !this.placements.has(unit.id));
+    return this.selectedArmy.units.filter((unit) => !this.displayedOwnCoordinate(unit));
   }
 
   protected getPlacedCount(): number {
@@ -441,6 +492,7 @@ export class App {
       this.header,
       this.selectedArmySide,
       this.placements,
+      this.federationOrders,
       this.keptFortressEntrenchments(),
       fileName,
     );
@@ -473,19 +525,83 @@ export class App {
     this.statusMessage = 'Draft saved.';
   }
 
-  protected getOccupant(x: number, y: number): { unit: FederationUnit; kind: 'own' | 'enemy' } | null {
+  protected cellChips(x: number, y: number): Array<{ unit: FederationUnit; kind: 'own' | 'enemy' }> {
     if (this.fedsHidden) {
-      return null;
+      return [];
     }
-    const own = this.ownByCoord.get(this.coordKey(x, y));
-    if (own) {
-      return { kind: 'own', unit: own };
+    const own = this.ownChipsAt(x, y);
+    if (own.length) {
+      return own.map((unit) => ({ kind: 'own', unit }));
     }
     const enemy = this.enemyByCoord.get(this.coordKey(x, y));
-    if (enemy) {
-      return { kind: 'enemy', unit: enemy };
+    return enemy ? [{ kind: 'enemy', unit: enemy }] : [];
+  }
+
+  protected chipDragEnabled(unit: FederationUnit): boolean {
+    return !this.overlayCoordinate(unit);
+  }
+
+  private viewingOrderPositions(): boolean {
+    return this.positionSource() !== 'deployment';
+  }
+
+  private positionSource(): 'start' | 'destination2' | 'altDestination1' | 'altDestination2' | 'deployment' {
+    switch (this.chipDisplayMode) {
+      case 'destination2':
+        return 'destination2';
+      case 'altDestination1':
+        return 'altDestination1';
+      case 'altDestination2':
+        return 'altDestination2';
+      case 'altCondition':
+      case 'altOrder':
+      case 'altAdditionalOrder':
+      case 'altFormation':
+        return 'deployment';
+      default:
+        return 'start';
     }
-    return null;
+  }
+
+  private overlayCoordinate(unit: FederationUnit): Coordinate | null {
+    const source = this.positionSource();
+    if (source === 'deployment') {
+      return null;
+    }
+    const orderRow = this.federationOrders.get(unit.id);
+    if (!orderRow) {
+      return null;
+    }
+    const value =
+      source === 'start'
+        ? orderRow.start
+        : source === 'destination2'
+          ? orderRow.primary.destination2
+          : source === 'altDestination1'
+            ? orderRow.alternative.destination1
+            : orderRow.alternative.destination2;
+    if (value.x === null || value.y === null || value.x < 1 || value.x > this.mapWidth || value.y < 1 || value.y > this.mapHeight) {
+      return null;
+    }
+    return { x: value.x, y: value.y };
+  }
+
+  private displayedOwnCoordinate(unit: FederationUnit): Coordinate | null {
+    return this.overlayCoordinate(unit) ?? this.placements.get(unit.id) ?? null;
+  }
+
+  private ownChipsAt(x: number, y: number): FederationUnit[] {
+    if (!this.selectedArmy) {
+      return [];
+    }
+    if (!this.viewingOrderPositions()) {
+      const placed = this.ownByCoord.get(this.coordKey(x, y));
+      return placed ? [placed] : [];
+    }
+    return this.selectedArmy.units.filter((unit) => {
+      const coord = this.displayedOwnCoordinate(unit);
+      return coord?.x === x && coord.y === y;
+    });
   }
 
   protected cellFeatureClass(cell: MapCell): string {
@@ -570,6 +686,9 @@ export class App {
   }
 
   protected toggleMapZoom(): void {
+    if (this.viewingOrderPositions()) {
+      return;
+    }
     this.mapZoomed = !this.mapZoomed;
   }
 
@@ -578,7 +697,7 @@ export class App {
   }
 
   protected isMapZoomed(): boolean {
-    return this.sheetView === 'deploy' && this.mapZoomed;
+    return this.sheetView === 'deploy' && this.mapZoomed && !this.viewingOrderPositions();
   }
 
   protected visibleColumns(): number[] {
@@ -618,6 +737,50 @@ export class App {
       return this.selectedArmy?.name ?? null;
     }
     return this.enemyArmy?.name ?? null;
+  }
+
+  protected selectChipMode(mode: (typeof this.chipDisplayModes)[number]['value']): void {
+    if (mode === 'altDestination1' || mode === 'altDestination2') {
+      if (!this.isAltChipLabel(this.chipLabelMode) && this.chipLabelMode !== 'additionalOrder') {
+        this.chipLabelMode = 'altCondition';
+      }
+    } else if (mode !== 'destination1' && mode !== 'destination2') {
+      this.chipLabelMode = mode;
+    }
+    this.chipDisplayMode = mode;
+  }
+
+  protected chipText(unit: FederationUnit): string {
+    if (this.chipLabelMode === 'fedType') {
+      return unit.troopCode;
+    }
+    if (this.chipLabelMode === 'fedNo') {
+      return String(unit.id);
+    }
+    const orderRow = this.federationOrders.get(unit.id);
+    if (!orderRow) {
+      return '';
+    }
+    switch (this.chipLabelMode) {
+      case 'battalionGroup':
+        return this.displayNumber(orderRow.battalionGroup);
+      case 'startAttack':
+        return this.displayNumber(orderRow.primary.startAttack);
+      case 'order':
+        return this.displayNumber(orderRow.primary.order);
+      case 'additionalOrder':
+        return this.displayNumber(orderRow.primary.additionalOrder);
+      case 'formation':
+        return this.displayFormation(orderRow.primary.formation);
+      case 'altCondition':
+        return this.displayNumber(orderRow.alternative.condition);
+      case 'altOrder':
+        return this.displayNumber(orderRow.alternative.order);
+      case 'altAdditionalOrder':
+        return this.displayNumber(orderRow.alternative.additionalOrder);
+      case 'altFormation':
+        return this.displayFormation(orderRow.alternative.formation);
+    }
   }
 
   protected onStrategicPoint(x: number, y: number): boolean {
@@ -667,6 +830,15 @@ export class App {
       occupied.add(key);
     }
 
+    this.federationOrders = new Map<number, FederationOrder>();
+    const knownIds = new Set(this.selectedArmy.units.map((unit) => unit.id));
+    setup.federationOrders.forEach((orderRow) => {
+      if (!knownIds.has(orderRow.federation)) {
+        return;
+      }
+      this.federationOrders.set(orderRow.federation, this.normalizeFederationOrder(orderRow));
+    });
+
     this.fortressEntrenchments = this.keptFortressEntrenchments(setup.fortressEntrenchments);
     this.awaitingEntrenchment = false;
     this.highlightedFederationId = null;
@@ -684,9 +856,10 @@ export class App {
   protected confirmClearAll(): void {
     this.clearAllPrompt = false;
     this.placements.clear();
+    this.federationOrders.clear();
     this.highlightedFederationId = null;
     this.rebuildOccupancyMaps();
-    this.statusMessage = 'All federations moved back to tray.';
+    this.statusMessage = 'All federations moved back to tray and their orders were cleared.';
     this.autoSaveDraft();
   }
 
@@ -815,6 +988,7 @@ export class App {
       header: this.header,
       placements: placementsRecord,
       fortressEntrenchments: this.keptFortressEntrenchments(),
+      federationOrders: this.federationOrdersRecord(),
     });
   }
 
@@ -844,6 +1018,15 @@ export class App {
         this.placements.set(unit.id, { x: coord.x, y: coord.y });
       }
     });
+    this.federationOrders.clear();
+    if (draft.federationOrders) {
+      Object.values(draft.federationOrders).forEach((orderRow) => {
+        if (!orderRow || !this.selectedArmy?.units.some((unit) => unit.id === orderRow.federation)) {
+          return;
+        }
+        this.federationOrders.set(orderRow.federation, this.normalizeFederationOrder(orderRow));
+      });
+    }
   }
 
   private buildRows(cells: MapCell[]): MapCell[][] {
@@ -993,6 +1176,71 @@ export class App {
     return Number.isFinite(number) ? number : null;
   }
 
+  private displayNumber(value: number | null): string {
+    return value === null ? '' : String(value);
+  }
+
+  private isAltChipLabel(mode: ChipLabelMode): boolean {
+    return mode === 'altCondition' || mode === 'altOrder' || mode === 'altAdditionalOrder' || mode === 'altFormation';
+  }
+
+  private displayFormation(value: number | null): string {
+    if (value === null) {
+      return '';
+    }
+    if (value === 0) {
+      return '0';
+    }
+    return this.formationByCode.get(value) ?? String(value);
+  }
+
+  private federationOrdersRecord(): Record<number, FederationOrder> {
+    const result: Record<number, FederationOrder> = {};
+    this.federationOrders.forEach((orderRow, id) => {
+      result[id] = this.normalizeFederationOrder(orderRow);
+    });
+    return result;
+  }
+
+  private normalizeFederationOrder(value: FederationOrder): FederationOrder {
+    return {
+      federation: this.coordValue(value.federation) ?? 0,
+      battalionGroup: this.coordValue(value.battalionGroup),
+      start: {
+        x: this.coordValue(value.start?.x ?? null),
+        y: this.coordValue(value.start?.y ?? null),
+      },
+      primary: {
+        startAttack: this.coordValue(value.primary?.startAttack ?? null),
+        order: this.coordValue(value.primary?.order ?? null),
+        additionalOrder: this.coordValue(value.primary?.additionalOrder ?? null),
+        formation: this.coordValue(value.primary?.formation ?? null),
+        destination1: {
+          x: this.coordValue(value.primary?.destination1?.x ?? null),
+          y: this.coordValue(value.primary?.destination1?.y ?? null),
+        },
+        destination2: {
+          x: this.coordValue(value.primary?.destination2?.x ?? null),
+          y: this.coordValue(value.primary?.destination2?.y ?? null),
+        },
+      },
+      alternative: {
+        condition: this.coordValue(value.alternative?.condition ?? null),
+        order: this.coordValue(value.alternative?.order ?? null),
+        additionalOrder: this.coordValue(value.alternative?.additionalOrder ?? null),
+        formation: this.coordValue(value.alternative?.formation ?? null),
+        destination1: {
+          x: this.coordValue(value.alternative?.destination1?.x ?? null),
+          y: this.coordValue(value.alternative?.destination1?.y ?? null),
+        },
+        destination2: {
+          x: this.coordValue(value.alternative?.destination2?.x ?? null),
+          y: this.coordValue(value.alternative?.destination2?.y ?? null),
+        },
+      },
+    };
+  }
+
   private parseTurnText(text: string): void {
     this.parsedTurn = this.parser.parse(text);
     this.header = { ...this.parsedTurn.header };
@@ -1007,6 +1255,7 @@ export class App {
     this.selectedArmy = null;
     this.enemyArmy = null;
     this.placements = new Map<number, Coordinate>();
+    this.federationOrders = new Map<number, FederationOrder>();
     this.rows = this.buildRows(this.parsedTurn.mapCells);
     this.ownByCoord.clear();
     this.enemyByCoord.clear();

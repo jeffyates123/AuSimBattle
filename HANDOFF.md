@@ -1,32 +1,35 @@
 # AuSimBattle handoff
 
-Client-only Angular app for setting up an Austerlitz play-by-email sim battle. The current slice loads a turn `.txt`, paints the battlefield, and shows the SIM sheet header. Federation placement and the SIM sheet download are coded but not wired into this screen.
+Client-only Angular app for setting up an Austerlitz play-by-email sim battle. One screen, `app-root`, with an empty router. A loaded `.txt` turn fills the sheet header, the federation tray, and the 45×40 battlefield. The same placements are stored in a browser draft and written into a SIM sheet workbook.
+
+`app/README.md` is the Angular CLI stub. This file is the handoff. Keep it as one document. Split only if a later slice adds a second screen, such as orders: leave this file as the index and add a short doc per screen.
 
 ## Run
 
 ```text
 cd app
 npm install
-npx ng serve
+npm start
 ```
 
-Open the URL the CLI prints. Port 4200 is often already taken; `npx ng serve --port 4201` works. Tests:
+`npm start` and `npm run build` run `app/scripts/copy-sim-sheets.mjs` first. That copies repo-root files named `SIM Sheet v0.6-*.xlsx` into `app/public/sim-sheets/`. `npx ng serve` skips that copy. Port 4200 is often already taken; `npx ng serve --port 4201` works. Tests:
 
 ```text
 cd app
 npx ng test
 ```
 
-`turn-parser.service.spec.ts` reads `../124W0213.txt` (Warsaw sim 204) and `../124D0113.txt` (Denmark sim 196).
+Specs: `turn-parser.service.spec.ts` (reads `../124W0213.txt` and `../124D0113.txt`), `rules.service.spec.ts`, `excel-export.service.spec.ts`, `app.spec.ts`.
 
-The app is zoneless (no `zone.js`). After `await file.text()`, `App` calls `ChangeDetectorRef.markForCheck()`. Any new async UI update needs the same, or a signal.
+The app is zoneless (no `zone.js`). After `await file.text()` and the other file fetches, `App` calls `ChangeDetectorRef.markForCheck()`. Any new async UI update needs the same, or a signal.
 
-## What the screen does now
+## What the screen does
 
-1. First open shows only the title **Austerlitz Sim Battle Setup** and **Load New**.
-2. **Load New** opens a `.txt` file picker. There is no paste box.
-3. A valid file hides the picker. **Load New** stays in the title and can replace the turn. An invalid file clears the turn and shows the error.
-4. The sheet header appears under the title, then the 45×40 battlefield.
+1. First open shows **Austerlitz Simulated Battle Planner** and **Load New Turn**. There is no paste box.
+2. **Load New Turn** opens a `.txt` file picker. A valid file hides the empty state. An invalid file clears the turn and shows the error.
+3. The title bar then has the army dropdown, the opponent line, **Load New Turn**, **Save SIM**, and **Load SIM**.
+4. **Header** and **Deploy** tabs sit under that bar. **Hide Feds**, **Zoom-In/Zoom-Out**, and **Clear All** stay on both tabs.
+5. The battlefield is always under the sheet panel.
 
 ### Sheet header
 
@@ -34,16 +37,30 @@ Filled from the turn, except the fields the player sets:
 
 | Field | Source |
 | --- | --- |
-| State | Nation on the `Game: AU-###` line above the battlefield (full name, e.g. Duchy of Warsaw) |
+| State | Nation on the `Game: AU-###` line above the battlefield |
 | Game | That game id, e.g. `AU-124` |
-| SimNumber | `Simulated battle No. N` |
+| SimNumber | `Simulated battle No. N` that introduces `The Battle field` |
 | Account | First `ACCOUNT:` in the file |
 | Player | First `Mr …` line, shown in capitals |
 | Process Date | Today, editable |
 | General Federation | Empty until typed. A number shows **Valid** beside it |
-| Army A or Army B? | **Army A** as soon as the file loads. Dropdown is Army A or Army B |
+| Army | The side whose deployment-area name best matches State. Dropdown is `Army A : {nation}` or `Army B : {nation}` |
 
-Fortress entrenchments are 10 slots, two rows of five. Each slot is a number and two coordinate boxes (x then y). They start empty. They are component state only: not parsed from the turn, not saved, not written to Excel.
+The opponent line is the other army and its federation maximum.
+
+### Fortress entrenchments
+
+Shown only for Army A, and only when the brief has a fortress. The line after `Main terrain:` is `<Nation> has a small|medium|large fortress`. It is always Army A. Denmark samples have no such line.
+
+| Size | Slots | Wall strength |
+| --- | --- | --- |
+| Small | 10 | 100 |
+| Medium | 5 | 350 |
+| Large | 10 | 500 |
+
+Those numbers live in `app/src/app/data/sim-battle-rules.json`. The header shows the size and wall strength. Medium is one row of five slots. Small and large are two rows of five. Each slot is a number and two coordinate boxes (x then y). They start empty.
+
+**Add** arms click-to-place. The next click inside the selected setup zone fills the next empty slot. A full set opens “No free fortress entrenchment”. **Clear** empties every slot. **[x]** empties one slot. Coordinates can also be typed.
 
 Label alignment, which should be kept:
 
@@ -56,51 +73,99 @@ Label alignment, which should be kept:
 - Every coordinate box is 52×26px. The slot number sits outside the boxes.
 - Column 7 is held at `min-width: 239px` so shortening the general label does not move the value boxes.
 
+### Deploy
+
+The palette lists unplaced federations for the selected army, ordered by id. A dropdown next to **Deploy** controls what every chip shows (tray and map): `Fed type`, `Fed no`, `Battalion Group`, `Start Attack`, `Order`, `Additional Order`, or `Formation`. The default is `Fed type`.
+
+- Drag a chip onto the setup zone, or click a chip and then click the map. After a click-place, the next higher unplaced id is armed.
+- Right-click a placed chip, or drag it back to the palette, to return it.
+- **Clear All** asks, then returns every own federation to the tray and clears each federation row’s order data (battalion group, primary and alternative order fields, formations, and destinations).
+- The map caption shows `Placed N / maximum`. The maximum is `Deployment area A/B, N Federations (Maximum)`.
+- One federation per coordinate. A drop on an occupied friendly cell swaps. An enemy cell rejects the drop. A new placement past the maximum is rejected.
+- Chips are red or blue by army, and tinted by troop family. Family comes from `army-tables.json`: battalion numbers 41–45 artillery, 21–39 cavalry, anything else infantry.
+- **Hide Feds** hides chips on the map. The cells stay.
+- **Zoom-In** applies only while Deploy is selected. It crops the grid to the setup rectangle plus one cell on each side, and enlarges the cell from 33×22px to 49.5×33px.
+
+Switching army reloads that side’s draft.
+
 ### Battlefield
 
 - Find the first `Simulated battle No. N` that is followed within 12 lines by `The Battle field`. Later `Simulated battle No.` lines that only continue battalion-group pages are ignored.
 - Grid is always x = 1..45, y = 1..40. Blank lines between rows are skipped (Denmark extracts have them).
 - Each cell is two characters: feature + height digit 0–9.
   - `.` open, `#` woods, `b` built-up, `W` water, `$` special.
-- A missing battlefield, a row that is not exactly 45 tokens, or a token that is not `[.#bW$][0-9]` fails the load. Parsing stops at 40 rows, the numbered footer, or `Opponents:`.
+- A missing battlefield, a row that is not exactly 45 tokens, or a token that is not `[.#bW$][0-9]` fails the load. Parsing stops at 40 rows, a non-row line, or `Opponents:`.
 - Colour is height only: 0 white, 1 yellow `#ffe500`, 2 light green `#9be59b`, 3 dark green `#1f7a32`, 4 light grey `#d3d3d3`, 5–8 a linear mix of that grey toward black, 9 black.
 - Open cells show the height digit. Feature cells show the feature character plus the digit (`#8`, `b7`, `W6`). Glyphs are dark below height 6 and light from 6 up.
-- Setup rectangles are fixed black outlines, not inferred from units: Army A is x 11–35, y 1–10. Army B is x 11–35, y 31–40.
-- Caption under the map title is `Sim {n} — A: {deployment area A}, B: {deployment area B}` from the `Deployment area A/B … (Maximum):` lines.
-- Hover text is `x, y  token  height N`.
+- Setup rectangles are fixed black outlines: Army A is x 11–35, y 1–10. Army B is x 11–35, y 31–40. The same rectangles are copied under `battlefield.setupAreas` in the rules JSON. The component does not read that copy.
+- The selected setup zone is also tinted.
+- Strategic points from `Strategic points A/B:` get a white 2px border. A placed entrenchment gets a dark gray 3px border. A cell with both uses the gray border plus an inset white 2px ring. Those borders sit above the unit chip (`::before`, `z-index: 4`).
+- A `$` cell draws a 1px black inset on each edge that does not touch another `$` cell. That is the fortress wall outline, and it is still 1px.
+- Map heading shows the selected deployment area and `Main terrain`.
+- Cell size is 33×22px. Glyphs are 12px. Axis gutter stays 22px.
 
-## What is coded but not on this screen
+### Armies
 
-`TurnParserService.parse` returns `armies: []`. The army picker, tray, drag-and-drop, and download button render only when `parsedTurn.armies.length` is set, so they never show.
+`Battalion Groups of {nation}` is matched to the deployment-area name. Page-break lines (`Page`, `AUSTERLITZ`, `Simulated battle No.`, `Fe Type`) are skipped. Each entry is `id` plus a two-letter type, from a line such as `12 Ln 3`. `start` is always null, so every federation begins in the tray. Enemy chips appear only when a unit has a start inside its setup zone, which the turn text does not supply.
 
-Also present and unused by the current screen:
+## Rules data
 
-- `DraftService` — `localStorage` key `ausim.setup.{gameId}.{simNumber}.{army}`.
-- `ExcelExportService` — builds a new Sheet1 workbook (header labels plus Fed and start x/y). It does not open `SIM Sheet v0.6-Warsaw Sim.xlsx`, so validation formulas are not preserved. Download name is `{game}_Sim_{sim}_Army_{A|B}.xlsx`.
-- Battle models in `app/src/app/models/battle.ts` mirror the C# sheet types (`SimulatedBattle`, `BattleHeader`, `FederationOrder`, orders, coordinates).
+`RulesService` loads both JSON files. The screen uses a small slice. The rest is source material for later work, not dead data and not enforced behaviour.
+
+- `app/src/app/data/army-tables.json` — nation names, aliases, and battalion stats from the army tables. Lookup is by nation or alias, then battalion number or short name. The UI uses the short name only to colour chips.
+- `app/src/app/data/sim-battle-rules.json` — section 7.2 of `Austerlitz Rules.pdf`. The UI reads `fortresses` only.
+- Unused blocks in that file: `orders`, `movement`, `longRangeCombat`, `handToHandCombat`, `morale`, `victory`, plus `battlefield.strategicPointsPerSide` (3) and `strategicPointsMinDistance` (5). The parser stores whatever strategic points the turn lists. It does not check the count or the spacing.
+
+## Save and load
+
+Two stores, both in the browser:
+
+- Draft: `localStorage` key `ausim.setup.{gameId}.{simNumber}.{army}`. Header, placements, and fortress slots. Saved on edit, place, and army change.
+- Workbook: `localStorage` key `ausim.simsheet.{fileName}`, plus a downloaded `.xlsx`.
+
+**Save SIM** is enabled whenever an army is selected. It does not wait until the placed count equals the maximum.
+
+Save fills `app/public/SIM Sheet v0.6-Template.xlsx` (fetched as `/SIM Sheet v0.6-Template.xlsx`) by editing `xl/worksheets/sheet1.xml`. It does not build a blank workbook, so the template’s validation formulas stay.
+
+| Sheet cells | Contents |
+| --- | --- |
+| C3, F3, L3, R3 | State, Game, SimNumber, General Federation |
+| C4, F4, L4, R4 | Account, Player, Process Date (Excel serial), Army A or Army B |
+| Row 6 and row 8, columns F/G, I/J, L/M, O/P, R/S | Entrenchment x/y, slots 1–5 then 6–10 |
+| Row `12 + federation id`, columns C and F–U | Battalion group and full primary/alternative order row |
+| Row `12 + federation id`, columns D and E | Start x/y, for ids 1–110 |
+
+Download name is `SIM Sheet v0.6-{State} Sim {N}.xlsx`. If that name already exists in `localStorage` or in `app/public/sim-sheets/`, the dialog offers **Overwrite** or **New version** (`_1`, `_2`, …).
+
+**Load SIM** looks for the same name pattern. One match loads it. Several matches open a chooser. None shows “File not found”. A saved browser copy wins over the public file. Loaded values replace the general, the process date, placements that belong to the selected army and sit in its setup zone, and the fortress slots.
 
 ## Not done
 
-- Deployment maxima, strategic points, and `Battalion Groups of …` are not parsed. Lists are larger than the deployment maximum. Units have no start coordinates, so they belong in a tray. Cap drops at the maximum. Download when the placed count equals that maximum.
-- One federation per coordinate. A drop on an occupied own cell swaps. Enemy cells stay locked. Colour is army only, not troop family.
-- Fortress coordinates are not read from the turn and are not exported.
-- Official template export needs the Warsaw xlsx copied under `app/public`. Angular cannot asset-copy a file outside the app workspace.
+- Order entry. `app/src/app/models/battle.ts` has primary and alternative orders, and the rules JSON has the order catalog. There is no orders UI.
+- Movement, combat, morale, and victory tables are data only.
+- `$` fortress-wall outlines are 1px. The requested thickness is 3px.
+- Setup rectangles are hardcoded in `app.ts`, not read from the rules JSON.
+- Turn text does not supply federation start coordinates.
+- The router is unused.
 
 ## Map files
 
-Sample turns live in the repo root, next to the SIM workbooks. Warsaw `124W0213.txt` has compact map rows. Denmark `124D0113.txt` has a blank line between rows. Do not use the older “Initial Deployment” grid (`124W0313.txt` and similar): federation ids drawn on the map are not the setup battlefield.
+Sample turns live in the repo root, next to the SIM workbooks. Warsaw `124W0213.txt` has compact map rows and a large fortress. Denmark `124D0113.txt` has a blank line between rows and no fortress. Do not use the older “Initial Deployment” grid (`124W0313.txt` and similar): federation ids drawn on the map are not the setup battlefield.
 
 ## Where to edit
 
 | Path | Role |
 | --- | --- |
-| `app/src/app/app.html` | Title, Load New, sheet header, map |
-| `app/src/app/app.css` | Header grid, fortress alignment, cell size |
-| `app/src/app/app.ts` | File load, height colours, labels, fortress state, dormant placement |
-| `app/src/app/services/turn-parser.service.ts` | Battlefield and header parse |
-| `app/src/app/models/turn.ts` | `ParsedTurn`, `MapCell`, setup types |
-| `app/src/app/models/battle.ts` | SIM sheet types |
-| `app/src/app/services/excel-export.service.ts` | Generated workbook |
+| `app/src/app/app.html` | Title, tabs, header, fortress slots, palette, map |
+| `app/src/app/app.css` | Header grid, fortress alignment, cell size, borders |
+| `app/src/app/app.ts` | File load, placement, zoom, entrenchments, height colours |
+| `app/src/app/services/turn-parser.service.ts` | Battlefield, brief, fortress line, battalion groups |
+| `app/src/app/models/turn.ts` | `ParsedTurn`, map, armies, fortress brief |
+| `app/src/app/models/battle.ts` | SIM header and unused order types |
+| `app/src/app/services/excel-export.service.ts` | Template fill, download, workbook round-trip |
 | `app/src/app/services/draft.service.ts` | localStorage draft |
-
-Cell size is 33×22px (width was increased 50% from 22). Glyphs are 12px. Axis gutter stays 22px. Map track is `22px repeat(45, 33px)`.
+| `app/src/app/services/rules.service.ts` | Nation, battalion, and fortress lookups |
+| `app/src/app/data/sim-battle-rules.json` | Section 7.2 extract |
+| `app/src/app/data/army-tables.json` | Battalion tables used for chip colour |
+| `app/scripts/copy-sim-sheets.mjs` | Copies root workbooks into `public/sim-sheets` before start and build |
+| `app/public/SIM Sheet v0.6-Template.xlsx` | Workbook that Save fills |

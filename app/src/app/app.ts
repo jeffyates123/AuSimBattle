@@ -29,6 +29,8 @@ type ChipLabelMode =
   | 'altAdditionalOrder'
   | 'altFormation';
 
+type EditableChipMode = Exclude<ChipLabelMode, 'fedType' | 'fedNo'>;
+
 @Component({
   imports: [CommonModule, FormsModule],
   selector: 'app-root',
@@ -77,6 +79,13 @@ export class App {
   protected chipDisplayMode: (typeof this.chipDisplayModes)[number]['value'] = 'fedType';
   protected chipLabelMode: ChipLabelMode = 'fedType';
   protected showFedEffectiveness = false;
+  protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string } | null = null;
+  protected valueAction: { unitId: number; mode: EditableChipMode; value: number } | null = null;
+  private valuePaint: { mode: EditableChipMode; value: number } | null = null;
+  private readonly orderCodes = new Set<number>();
+  private readonly additionalOrderCodes = new Set<number>();
+  private readonly formationCodes = new Set<number>([0]);
+  private readonly conditionCodes = new Set<number>();
   protected mapZoomed = false;
   protected fedsHidden = false;
   protected awaitingEntrenchment = false;
@@ -143,9 +152,22 @@ export class App {
     private readonly rules: RulesService,
     private readonly changeDetector: ChangeDetectorRef,
   ) {
-    this.rules
-      .getSimBattleStore()
-      .orders.formationOrders.forEach((item) => this.formationByCode.set(item.code, item.formation));
+    const orders = this.rules.getSimBattleStore().orders;
+    orders.formationOrders.forEach((item) => {
+      this.formationByCode.set(item.code, item.formation);
+      this.formationCodes.add(item.code);
+    });
+    for (const group of [orders.movementAttack, orders.pioneerOnly, orders.detachmentOrders, orders.swapDetachmentOrders]) {
+      group.forEach((item) => this.orderCodes.add(item.code));
+    }
+    orders.additionalOrders.troopTypeFilters.forEach((item) => this.additionalOrderCodes.add(item.code));
+    orders.additionalOrders.strategicPointSequence.forEach((item) => this.additionalOrderCodes.add(item.code));
+    const rounds = orders.alternativeConditions.roundStartRange;
+    for (let round = rounds.min; round <= rounds.max; round += 1) {
+      this.conditionCodes.add(round);
+    }
+    orders.alternativeConditions.headcountDropBelowCodes.forEach((item) => this.conditionCodes.add(item.code));
+    orders.alternativeConditions.other.forEach((item) => this.conditionCodes.add(item.code));
   }
 
   protected async onTurnFileSelected(event: Event): Promise<void> {
@@ -258,8 +280,11 @@ export class App {
     this.lastPaletteDragAt = performance.now();
   }
 
-  protected onPaletteUnitClick(unitId: number): void {
+  protected onPaletteUnitClick(event: MouseEvent, unitId: number): void {
     if (performance.now() - this.lastPaletteDragAt < 400) {
+      return;
+    }
+    if (this.beginValueEdit(unitId, event.detail)) {
       return;
     }
     this.selectFederation(unitId, 'own');
@@ -267,10 +292,27 @@ export class App {
 
   protected onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
     event.stopPropagation();
+    if (kind === 'own' && this.beginValueEdit(unitId, event.detail)) {
+      return;
+    }
     this.selectFederation(unitId, kind);
     if (kind === 'own' && this.setupEditingEnabled() && event.detail >= 2 && performance.now() - this.armedClickAt > 500) {
       this.returnToPool(unitId);
     }
+  }
+
+  protected onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
+    const mode = this.editableChipMode();
+    if (!mode || kind !== 'own') {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.fieldValue(unitId, mode) === null) {
+      return;
+    }
+    this.writeField(unitId, mode, null);
+    this.statusMessage = `Cleared ${this.fieldLabel(mode)} on federation ${unitId}.`;
   }
 
   protected selectedOrderDebug(): string {
@@ -1013,6 +1055,11 @@ export class App {
   }
 
   protected selectChipMode(mode: (typeof this.chipDisplayModes)[number]['value']): void {
+    if (mode !== this.chipDisplayMode) {
+      this.valuePaint = null;
+      this.valueEntry = null;
+      this.valueAction = null;
+    }
     if (mode === 'fedType' && this.chipDisplayMode === 'fedType') {
       this.showFedEffectiveness = !this.showFedEffectiveness;
     } else {
@@ -1068,6 +1115,318 @@ export class App {
       return unit.troopCode;
     }
     return `${unit.troopCode} ${Math.round(unit.effectiveness)}`;
+  }
+
+  protected valueActionType(): string {
+    const action = this.valueAction;
+    if (!action || !this.selectedArmy) {
+      return '';
+    }
+    return this.selectedArmy.units.find((unit) => unit.id === action.unitId)?.troopCode ?? '';
+  }
+
+  protected valueActionText(): string {
+    return this.valueAction ? this.displayFieldValue(this.valueAction.mode, this.valueAction.value) : '';
+  }
+
+  protected confirmValueEntry(event: Event): void {
+    event.preventDefault();
+    const entry = this.valueEntry;
+    if (!entry) {
+      return;
+    }
+    const parsed = this.parseFieldInput(entry.mode, entry.draft);
+    if (parsed === null || !this.fieldValueAllowed(entry.mode, parsed)) {
+      entry.error = this.fieldInvalidMessage(entry.mode);
+      this.changeDetector.markForCheck();
+      return;
+    }
+    this.valueEntry = null;
+    this.valuePaint = null;
+    this.writeField(entry.unitId, entry.mode, parsed);
+    this.statusMessage = `Saved ${this.fieldLabel(entry.mode)} ${this.displayFieldValue(entry.mode, parsed)} on federation ${entry.unitId}.`;
+  }
+
+  protected paintSameValue(): void {
+    const action = this.valueAction;
+    if (!action) {
+      return;
+    }
+    this.valuePaint = { mode: action.mode, value: action.value };
+    this.valueAction = null;
+    this.statusMessage = `Painting ${this.fieldLabel(action.mode)} ${this.displayFieldValue(action.mode, action.value)}. Click an empty federation.`;
+  }
+
+  protected paintValueToAll(): void {
+    const action = this.valueAction;
+    if (!action || !this.selectedArmy) {
+      return;
+    }
+    let count = 0;
+    for (const unit of this.selectedArmy.units) {
+      if (this.fieldValue(unit.id, action.mode) === null) {
+        this.writeField(unit.id, action.mode, action.value, false);
+        count += 1;
+      }
+    }
+    this.autoSaveDraft();
+    this.valuePaint = null;
+    this.valueAction = null;
+    this.statusMessage = `Painted ${this.fieldLabel(action.mode)} ${this.displayFieldValue(action.mode, action.value)} onto ${count} empty federations.`;
+  }
+
+  protected paintValueToSameType(): void {
+    const action = this.valueAction;
+    const troopCode = this.valueActionType();
+    if (!action || !this.selectedArmy || !troopCode) {
+      return;
+    }
+    let count = 0;
+    for (const unit of this.selectedArmy.units) {
+      if (unit.troopCode !== troopCode) {
+        continue;
+      }
+      this.writeField(unit.id, action.mode, action.value, false);
+      count += 1;
+    }
+    this.autoSaveDraft();
+    this.valuePaint = null;
+    this.valueAction = null;
+    this.statusMessage = `Set ${this.fieldLabel(action.mode)} ${this.displayFieldValue(action.mode, action.value)} on ${count} ${troopCode} federations.`;
+  }
+
+  protected changeValue(): void {
+    const action = this.valueAction;
+    if (!action) {
+      return;
+    }
+    this.valuePaint = null;
+    this.valueAction = null;
+    this.openValueEntry(action.unitId, action.mode, String(action.value));
+  }
+
+  private beginValueEdit(unitId: number, detail: number): boolean {
+    const mode = this.editableChipMode();
+    if (!mode) {
+      return false;
+    }
+    if (detail > 1) {
+      return true;
+    }
+    this.selectFederation(unitId, 'own');
+    const current = this.fieldValue(unitId, mode);
+    if (current === null) {
+      if (this.valuePaint?.mode === mode) {
+        this.writeField(unitId, mode, this.valuePaint.value);
+        this.statusMessage = `Saved ${this.fieldLabel(mode)} ${this.displayFieldValue(mode, this.valuePaint.value)} on federation ${unitId}.`;
+        return true;
+      }
+      this.openValueEntry(unitId, mode, '');
+      return true;
+    }
+    this.valueAction = { unitId, mode, value: current };
+    return true;
+  }
+
+  private openValueEntry(unitId: number, mode: EditableChipMode, draft: string): void {
+    this.valueEntry = { unitId, mode, draft, error: '', hint: this.fieldHint(mode) };
+  }
+
+  private editableChipMode(): EditableChipMode | null {
+    switch (this.chipDisplayMode) {
+      case 'battalionGroup':
+      case 'startAttack':
+      case 'order':
+      case 'additionalOrder':
+      case 'formation':
+      case 'altCondition':
+      case 'altOrder':
+      case 'altAdditionalOrder':
+      case 'altFormation':
+        return this.chipDisplayMode;
+      default:
+        return null;
+    }
+  }
+
+  private fieldValue(unitId: number, mode: EditableChipMode): number | null {
+    const orderRow = this.orderRowFor(unitId);
+    if (!orderRow) {
+      return null;
+    }
+    switch (mode) {
+      case 'battalionGroup':
+        return orderRow.battalionGroup;
+      case 'startAttack':
+        return orderRow.primary.startAttack;
+      case 'order':
+        return orderRow.primary.order;
+      case 'additionalOrder':
+        return orderRow.primary.additionalOrder;
+      case 'formation':
+        return orderRow.primary.formation;
+      case 'altCondition':
+        return orderRow.alternative.condition;
+      case 'altOrder':
+        return orderRow.alternative.order;
+      case 'altAdditionalOrder':
+        return orderRow.alternative.additionalOrder;
+      case 'altFormation':
+        return orderRow.alternative.formation;
+    }
+  }
+
+  private writeField(unitId: number, mode: EditableChipMode, value: number | null, save = true): void {
+    const orderRow = this.ensureOrderRow(unitId);
+    switch (mode) {
+      case 'battalionGroup':
+        orderRow.battalionGroup = value;
+        break;
+      case 'startAttack':
+        orderRow.primary.startAttack = value;
+        break;
+      case 'order':
+        orderRow.primary.order = value;
+        break;
+      case 'additionalOrder':
+        orderRow.primary.additionalOrder = value;
+        break;
+      case 'formation':
+        orderRow.primary.formation = value;
+        break;
+      case 'altCondition':
+        orderRow.alternative.condition = value;
+        break;
+      case 'altOrder':
+        orderRow.alternative.order = value;
+        break;
+      case 'altAdditionalOrder':
+        orderRow.alternative.additionalOrder = value;
+        break;
+      case 'altFormation':
+        orderRow.alternative.formation = value;
+        break;
+    }
+    if (save) {
+      this.autoSaveDraft();
+    }
+  }
+
+  private ensureOrderRow(unitId: number): FederationOrder {
+    const existing = this.orderRowFor(unitId);
+    if (existing) {
+      return existing;
+    }
+    const blank = { x: null, y: null };
+    const orderRow: FederationOrder = {
+      federation: unitId,
+      battalionGroup: null,
+      start: { ...blank },
+      primary: {
+        startAttack: null,
+        order: null,
+        additionalOrder: null,
+        formation: null,
+        destination1: { ...blank },
+        destination2: { ...blank },
+      },
+      alternative: {
+        condition: null,
+        order: null,
+        additionalOrder: null,
+        formation: null,
+        destination1: { ...blank },
+        destination2: { ...blank },
+      },
+    };
+    this.federationOrders.set(unitId, orderRow);
+    return orderRow;
+  }
+
+  private parseFieldInput(mode: EditableChipMode, raw: string): number | null {
+    const text = raw.trim();
+    if (mode === 'formation' || mode === 'altFormation') {
+      for (const [code, name] of this.formationByCode) {
+        if (name.toLowerCase() === text.toLowerCase()) {
+          return code;
+        }
+      }
+    }
+    if (!/^\d+$/.test(text)) {
+      return null;
+    }
+    return Number(text);
+  }
+
+  private fieldValueAllowed(mode: EditableChipMode, value: number): boolean {
+    switch (mode) {
+      case 'battalionGroup':
+        return value >= 0 && value <= 99;
+      case 'startAttack':
+        return value >= 0 && value <= 25;
+      case 'order':
+      case 'altOrder':
+        return this.orderCodes.has(value);
+      case 'additionalOrder':
+      case 'altAdditionalOrder':
+        return this.additionalOrderCodes.has(value);
+      case 'formation':
+      case 'altFormation':
+        return this.formationCodes.has(value);
+      case 'altCondition':
+        return this.conditionCodes.has(value);
+    }
+  }
+
+  protected fieldLabel(mode: EditableChipMode): string {
+    return this.chipDisplayModes.find((item) => item.value === mode)?.label ?? mode;
+  }
+
+  private fieldHint(mode: EditableChipMode): string {
+    switch (mode) {
+      case 'battalionGroup':
+        return 'Enter a battalion group from 0 to 99.';
+      case 'startAttack':
+        return 'Enter a start-attack round from 0 to 25.';
+      case 'order':
+      case 'altOrder':
+        return 'Enter an order code, such as 11, 21, or 41.';
+      case 'additionalOrder':
+      case 'altAdditionalOrder':
+        return 'Enter an additional-order code, such as 0 or 1.';
+      case 'formation':
+      case 'altFormation':
+        return 'Enter 0, 1 (Co), 2 (Li), 3 (Sk), or 4 (Sq).';
+      case 'altCondition':
+        return 'Enter a round from 1 to 25, or a condition code such as 30 or 41.';
+    }
+  }
+
+  private fieldInvalidMessage(mode: EditableChipMode): string {
+    switch (mode) {
+      case 'battalionGroup':
+        return 'Enter a whole number from 0 to 99.';
+      case 'startAttack':
+        return 'Enter a whole number from 0 to 25.';
+      case 'order':
+      case 'altOrder':
+        return 'That is not a valid order code.';
+      case 'additionalOrder':
+      case 'altAdditionalOrder':
+        return 'That is not a valid additional-order code.';
+      case 'formation':
+      case 'altFormation':
+        return 'Enter 0, 1, 2, 3, 4, or Co, Li, Sk, Sq.';
+      case 'altCondition':
+        return 'That is not a valid condition.';
+    }
+  }
+
+  private displayFieldValue(mode: EditableChipMode, value: number): string {
+    if (mode === 'formation' || mode === 'altFormation') {
+      return this.displayFormation(value);
+    }
+    return String(value);
   }
 
   protected onStrategicPoint(x: number, y: number): boolean {
@@ -1556,6 +1915,9 @@ export class App {
     this.chipDisplayMode = 'fedType';
     this.chipLabelMode = 'fedType';
     this.showFedEffectiveness = false;
+    this.valueEntry = null;
+    this.valueAction = null;
+    this.valuePaint = null;
     if (this.parsedTurn.armies.length) {
       this.pickArmy(preferredArmySide, { restoreDraft: false, saveDraft: false });
       return;

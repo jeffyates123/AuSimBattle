@@ -667,6 +667,13 @@ input[type='date'] {
   overflow-wrap: anywhere;
 }
 
+.warning-dialog input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 12px;
+  padding: 6px 8px;
+}
+
 .warning-actions {
   display: flex;
   flex-wrap: wrap;

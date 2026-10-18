@@ -41,6 +41,49 @@ describe('App', () => {
     expect(app.chipText(unit!)).toBe('GR');
   });
 
+  it('edits a start-attack value and paints it onto empty federations', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      selectChipMode(mode: 'startAttack' | 'order'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own'): void;
+      confirmValueEntry(event: Event): void;
+      paintValueToAll(): void;
+      paintValueToSameType(): void;
+      chipText(unit: { id: number }): string;
+      selectedArmy: { units: Array<{ id: number; troopCode: string }> } | null;
+      valueEntry: { draft: string; error: string } | null;
+      valueAction: { value: number } | null;
+      statusMessage: string;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    app.selectChipMode('startAttack');
+    const click = new MouseEvent('click');
+    app.onPaletteUnitClick(click, 1);
+    expect(app.valueEntry).toBeTruthy();
+    app.valueEntry!.draft = '0';
+    app.confirmValueEntry(new Event('submit'));
+    const first = app.selectedArmy!.units[0];
+    expect(app.chipText(first)).toBe('0');
+
+    app.onPaletteUnitClick(click, 1);
+    expect(app.valueAction?.value).toBe(0);
+    app.paintValueToAll();
+    expect(app.selectedArmy!.units.every((unit) => app.chipText(unit) === '0')).toBe(true);
+
+    app.onChipContextMenu(new MouseEvent('contextmenu'), 1, 'own');
+    expect(app.chipText(first)).toBe('');
+
+    app.selectChipMode('order');
+    app.onPaletteUnitClick(click, 2);
+    app.valueEntry!.draft = '7';
+    app.confirmValueEntry(new Event('submit'));
+    expect(app.valueEntry?.error).toContain('not a valid order');
+  });
+
   it('should render the load button before a turn is opened', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();

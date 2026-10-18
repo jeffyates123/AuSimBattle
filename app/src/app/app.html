@@ -33,6 +33,36 @@
       </div>
     </div>
   }
+  @if (valueEntry) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="dialog" aria-label="Enter a value">
+        <p>{{ fieldLabel(valueEntry.mode) }} for federation {{ valueEntry.unitId }}</p>
+        <p>{{ valueEntry.hint }}</p>
+        <form (submit)="confirmValueEntry($event)">
+          <input name="chipValueDraft" [(ngModel)]="valueEntry.draft" autocomplete="off" autofocus />
+          @if (valueEntry.error) {
+            <p class="error">{{ valueEntry.error }}</p>
+          }
+          <div class="warning-actions">
+            <button type="submit">Save</button>
+            <button type="button" (click)="valueEntry = null">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+  @if (valueAction) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="dialog" aria-label="Use this value">
+        <p>Federation {{ valueAction.unitId }} has {{ valueActionText() }}.</p>
+        <button type="button" class="sim-choice" (click)="paintSameValue()">Paint same value</button>
+        <button type="button" class="sim-choice" (click)="paintValueToAll()">Paint value to all</button>
+        <button type="button" class="sim-choice" (click)="paintValueToSameType()">Paint value to all {{ valueActionType() }}</button>
+        <button type="button" class="sim-choice" (click)="changeValue()">Change value</button>
+        <button type="button" class="sim-choice" (click)="valueAction = null">Cancel</button>
+      </div>
+    </div>
+  }
   @if (simFileChoices) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="Choose a SIM sheet">
@@ -241,7 +271,8 @@
                 draggable="true"
                 (dragstart)="onUnitDragStart($event, unit.id)"
                 (dragend)="onUnitDragEnd()"
-                (click)="onPaletteUnitClick(unit.id)"
+                (click)="onPaletteUnitClick($event, unit.id)"
+                (contextmenu)="onChipContextMenu($event, unit.id, 'own')"
                 [title]="'Federation ' + unit.id"
               >
                 <span class="chip-text" [class.wide]="chipText(unit).length > 3">{{ chipText(unit) }}</span>
@@ -330,6 +361,7 @@
                         [class.armed]="occupant.unit.id === highlightedFederationId && occupant.kind === highlightedFederationKind"
                         [attr.draggable]="occupant.kind === 'own' && chipDragEnabled(occupant.unit)"
                         (click)="onChipClick($event, occupant.unit.id, occupant.kind)"
+                        (contextmenu)="onChipContextMenu($event, occupant.unit.id, occupant.kind)"
                         (dragstart)="occupant.kind === 'own' && chipDragEnabled(occupant.unit) && onUnitDragStart($event, occupant.unit.id)"
                         [title]="'Federation ' + occupant.unit.id"
                       >

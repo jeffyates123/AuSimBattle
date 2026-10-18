@@ -28,7 +28,7 @@ The app is zoneless (no `zone.js`). After `await file.text()` and the other file
 1. First open shows **Austerlitz Simulated Battle Planner** and **Load New Turn**. There is no paste box.
 2. **Load New Turn** opens a `.txt` file picker. A valid file hides the empty state. An invalid file clears the turn and shows the error.
 3. The title bar then has the army dropdown, the opponent line, **Load New Turn**, **Save SIM**, and **Load SIM**.
-4. **Header** and **Deploy** tabs sit under that bar. **Hide Feds**, **Zoom-In/Zoom-Out**, and **Clear All** stay on both tabs.
+4. **Header** and **Deploy** tabs sit under that bar. **Hide Feds**, **Set-Up Area** / **Battle field**, and **Clear All** stay on both tabs.
 5. The battlefield is always under the sheet panel.
 
 ### Sheet header
@@ -68,23 +68,32 @@ Label alignment, which should be kept:
 - **3** and **8** sit on the SimNumber / Process Date value boxes.
 - **5** and **10** sit on the General Federation / Army value boxes.
 - **2**, **7**, **4**, and **9** sit in the gaps between those columns.
-- SimNumber and Process Date labels line up with **2** / **7**.
-- General Federation and Army labels line up with **4** / **9**.
+- SimNumber and Process Date labels line up with **2** / **7** and use the shared 7px slot offset.
+- **General Federation** and **Army A or Army B?** do not. Those two labels have no offset and 10px of space before the input, so the fields sit close to the words.
 - Every coordinate box is 52×26px. The slot number sits outside the boxes.
-- Column 7 is held at `min-width: 239px` so shortening the general label does not move the value boxes.
 
 ### Deploy
 
-The palette lists unplaced federations for the selected army, ordered by id. A dropdown next to **Deploy** controls what every chip shows (tray and map): `Fed type`, `Fed no`, `Battalion Group`, `Start Attack`, `Order`, `Additional Order`, or `Formation`. The default is `Fed type`.
+The palette lists unplaced federations for the selected army, ordered by id. Two rows of buttons above the map title control every own chip. Loading a turn selects **Ty** and places chips on the order-row start x/y.
 
-- Drag a chip onto the setup zone, or click a chip and then click the map. After a click-place, the next higher unplaced id is armed.
+| Row | Buttons |
+| --- | --- |
+| 1 | Ty, No, BG, Start, Ord, Add, Form, D1, D2 |
+| 2 | ACond, AOrd, AAdd, AForm, AD1, AD2 |
+
+Position and label are separate. **Ty** through **Form** move chips to the order-row start x/y and set the label to that field. **D1** and **D2** move chips to those destinations and leave the current label. **AD1** and **AD2** move chips to the alternative destinations. If the current label is already **Add** or one of **ACond**, **AOrd**, **AAdd**, **AForm**, that label stays; otherwise it becomes **ACond**. The four alternative label buttons leave chips on the deployment placements and set the label. A missing coordinate leaves the chip on its deployment cell. Enemy chips always show the troop code. Formation `0` stays `0`; other codes show the formation name when it is known.
+
+While chips are on a start or destination coordinate, drag and click-to-place are off. Several own chips may share one destination cell; they split that cell. Deployment placement is still one federation per cell.
+
+- Drag a chip onto the setup zone, or click a chip and then click the map. After a click-place, the next higher unplaced id is armed. Clicking a chip on the map selects that federation.
 - Right-click a placed chip, or drag it back to the palette, to return it.
 - **Clear All** asks, then returns every own federation to the tray and clears each federation row’s order data (battalion group, primary and alternative order fields, formations, and destinations).
 - The map caption shows `Placed N / maximum`. The maximum is `Deployment area A/B, N Federations (Maximum)`.
-- One federation per coordinate. A drop on an occupied friendly cell swaps. An enemy cell rejects the drop. A new placement past the maximum is rejected.
+- One federation per deployment coordinate. A drop on an occupied friendly cell swaps. An enemy cell rejects the drop. A new placement past the maximum is rejected.
 - Chips are red or blue by army, and tinted by troop family. Family comes from `army-tables.json`: battalion numbers 41–45 artillery, 21–39 cavalry, anything else infantry.
 - **Hide Feds** hides chips on the map. The cells stay.
-- **Zoom-In** applies only while Deploy is selected. It crops the grid to the setup rectangle plus one cell on each side, and enlarges the cell from 33×22px to 49.5×33px.
+- **Set-Up Area** crops the grid to the selected setup rectangle plus one cell on each side and enlarges the cell from 33×22px to 49.5×33px. The button then reads **Battle field**, which restores the full map. It works on both tabs once an army is selected.
+- A sticky line under the map shows the selected federation’s order row: BG, XY, Start, Ord, Add, Form, D1, D2, Cond, AOrd, AAdd, AForm, AD1, AD2. With no selection it says `Selected federation: none`. An enemy chip, or an own federation with no order row, shows the id, troop code, and start.
 
 Switching army reloads that side’s draft.
 
@@ -120,7 +129,7 @@ Switching army reloads that side’s draft.
 
 Two stores, both in the browser:
 
-- Draft: `localStorage` key `ausim.setup.{gameId}.{simNumber}.{army}`. Header, placements, and fortress slots. Saved on edit, place, and army change.
+- Draft: `localStorage` key `ausim.setup.{gameId}.{simNumber}.{army}`. Header, placements, fortress slots, and federation order rows. Saved on edit, place, and army change.
 - Workbook: `localStorage` key `ausim.simsheet.{fileName}`, plus a downloaded `.xlsx`.
 
 **Save SIM** is enabled whenever an army is selected. It does not wait until the placed count equals the maximum.
@@ -141,7 +150,7 @@ Download name is `SIM Sheet v0.6-{State} Sim {N}.xlsx`. If that name already exi
 
 ## Not done
 
-- Order entry. `app/src/app/models/battle.ts` has primary and alternative orders, and the rules JSON has the order catalog. There is no orders UI.
+- Order entry. Order rows load from the SIM sheet and the draft, show on the chips, and save back. There is still no form for typing an order. `app/src/app/models/battle.ts` has the row shape, and the rules JSON has the order catalog.
 - Movement, combat, morale, and victory tables are data only.
 - `$` fortress-wall outlines are 1px. The requested thickness is 3px.
 - Setup rectangles are hardcoded in `app.ts`, not read from the rules JSON.
@@ -158,7 +167,7 @@ Sample turns live in the repo root, next to the SIM workbooks. Warsaw `124W0213.
 | --- | --- |
 | `app/src/app/app.html` | Title, tabs, header, fortress slots, palette, map |
 | `app/src/app/app.css` | Header grid, fortress alignment, cell size, borders |
-| `app/src/app/app.ts` | File load, placement, zoom, entrenchments, height colours |
+| `app/src/app/app.ts` | File load, placement, chip modes, zoom, entrenchments, height colours |
 | `app/src/app/services/turn-parser.service.ts` | Battlefield, brief, fortress line, battalion groups |
 | `app/src/app/models/turn.ts` | `ParsedTurn`, map, armies, fortress brief |
 | `app/src/app/models/battle.ts` | SIM header and unused order types |

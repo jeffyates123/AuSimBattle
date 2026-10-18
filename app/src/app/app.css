@@ -118,9 +118,10 @@
   transform: translateX(7px);
 }
 
-.general-label {
-  display: inline-block;
-  min-width: 239px;
+.general-label,
+.army-label {
+  transform: none;
+  padding-right: 10px;
 }
 
 .value-slot {

@@ -1345,6 +1345,8 @@ export class App {
     this.rows = this.buildRows(this.parsedTurn.mapCells);
     this.ownByCoord.clear();
     this.enemyByCoord.clear();
+    this.chipDisplayMode = 'fedType';
+    this.chipLabelMode = 'fedType';
     if (this.parsedTurn.armies.length) {
       this.pickArmy(preferredArmySide);
       return;

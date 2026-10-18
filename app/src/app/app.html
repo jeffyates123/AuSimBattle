@@ -131,7 +131,7 @@
               <button type="button" class="paired-action" (click)="toggleFedsHidden()">
                 {{ fedsHidden ? 'Show Feds' : 'Hide Feds' }}
               </button>
-              <button type="button" class="paired-action" (click)="toggleMapZoom()">{{ isMapZoomed() ? 'Zoom-Out' : 'Zoom-In' }}</button>
+              <button type="button" class="paired-action" (click)="toggleMapZoom()">{{ isMapZoomed() ? 'Battle field' : 'Set-Up Area' }}</button>
               <button type="button" class="paired-action" (click)="askClearAll()">Clear All</button>
             </div>
           }
@@ -312,7 +312,9 @@
                         [class.troop-infantry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'infantry'"
                         [class.troop-cavalry]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'cavalry'"
                         [class.troop-artillery]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'artillery'"
+                        [class.armed]="occupant.unit.id === highlightedFederationId && occupant.kind === highlightedFederationKind"
                         [attr.draggable]="occupant.kind === 'own' && chipDragEnabled(occupant.unit)"
+                        (click)="onChipClick($event, occupant.unit.id, occupant.kind)"
                         (dragstart)="occupant.kind === 'own' && chipDragEnabled(occupant.unit) && onUnitDragStart($event, occupant.unit.id)"
                         [title]="'Federation ' + occupant.unit.id"
                       >
@@ -331,6 +333,9 @@
     </section>
   }
 
+  @if (rows.length) {
+    <footer class="status-line order-debug">{{ selectedOrderDebug() }}</footer>
+  }
   @if (statusMessage) {
     <footer class="status-line">
       {{ statusMessage }}

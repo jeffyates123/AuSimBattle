@@ -119,6 +119,7 @@ export class App {
   protected placements = new Map<number, Coordinate>();
   protected federationOrders = new Map<number, FederationOrder>();
   protected highlightedFederationId: number | null = null;
+  protected highlightedFederationKind: 'own' | 'enemy' = 'own';
   private lastDropAt = 0;
   private armedClickAt = 0;
   private lastPaletteDragAt = 0;
@@ -231,7 +232,61 @@ export class App {
     if (performance.now() - this.lastPaletteDragAt < 400) {
       return;
     }
-    this.highlightedFederationId = unitId;
+    this.selectFederation(unitId, 'own');
+  }
+
+  protected onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
+    event.stopPropagation();
+    this.selectFederation(unitId, kind);
+    if (kind === 'own' && !this.viewingOrderPositions() && event.detail >= 2 && performance.now() - this.armedClickAt > 500) {
+      this.returnToPool(unitId);
+    }
+  }
+
+  protected selectedOrderDebug(): string {
+    const id = this.highlightedFederationId;
+    if (id === null) {
+      return 'Selected federation: none';
+    }
+    const unit = this.federationUnit(id, this.highlightedFederationKind);
+    const row = this.highlightedFederationKind === 'own' ? this.orderRowFor(id) : undefined;
+    if (!row) {
+      const troop = unit?.troopCode ?? '';
+      const start = unit?.start ? `${unit.start.x}/${unit.start.y}` : '—';
+      const side = this.highlightedFederationKind === 'enemy' ? 'Enemy' : 'Fed';
+      return `${side} ${id} ${troop} start ${start}`.replace(/\s+/g, ' ').trim();
+    }
+    const coord = (value: { x: number | null; y: number | null }): string => {
+      if (value.x === null && value.y === null) {
+        return '—';
+      }
+      if (value.x === null) {
+        return String(value.y);
+      }
+      if (value.y === null) {
+        return String(value.x);
+      }
+      return `${value.x}/${value.y}`;
+    };
+    const num = (value: number | null): string => (value === null ? '—' : String(value));
+    const form = (value: number | null): string => this.displayFormation(value) || '—';
+    return [
+      `Fed ${id}`,
+      `BG ${num(row.battalionGroup)}`,
+      `XY ${coord(row.start)}`,
+      `Start ${num(row.primary.startAttack)}`,
+      `Ord ${num(row.primary.order)}`,
+      `Add ${num(row.primary.additionalOrder)}`,
+      `Form ${form(row.primary.formation)}`,
+      `D1 ${coord(row.primary.destination1)}`,
+      `D2 ${coord(row.primary.destination2)}`,
+      `Cond ${num(row.alternative.condition)}`,
+      `AOrd ${num(row.alternative.order)}`,
+      `AAdd ${num(row.alternative.additionalOrder)}`,
+      `AForm ${form(row.alternative.formation)}`,
+      `AD1 ${coord(row.alternative.destination1)}`,
+      `AD2 ${coord(row.alternative.destination2)}`,
+    ].join('  ');
   }
 
   protected onCellDragOver(event: DragEvent): void {
@@ -545,8 +600,10 @@ export class App {
     return this.positionSource() !== 'deployment';
   }
 
-  private positionSource(): 'start' | 'destination2' | 'altDestination1' | 'altDestination2' | 'deployment' {
+  private positionSource(): 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | 'deployment' {
     switch (this.chipDisplayMode) {
+      case 'destination1':
+        return 'destination1';
       case 'destination2':
         return 'destination2';
       case 'altDestination1':
@@ -563,23 +620,53 @@ export class App {
     }
   }
 
+  private selectFederation(unitId: number, kind: 'own' | 'enemy'): void {
+    this.highlightedFederationId = unitId;
+    this.highlightedFederationKind = kind;
+  }
+
+  private federationUnit(id: number, kind: 'own' | 'enemy'): FederationUnit | undefined {
+    const army = kind === 'own' ? this.selectedArmy : this.enemyArmy;
+    return army?.units.find((unit) => unit.id === id);
+  }
+
+  private isOwnUnit(unit: FederationUnit): boolean {
+    return this.selectedArmy?.units.includes(unit) ?? false;
+  }
+
+  private orderRowFor(id: number): FederationOrder | undefined {
+    const numericId = Number(id);
+    const direct = this.federationOrders.get(numericId);
+    if (direct) {
+      return direct;
+    }
+    for (const row of this.federationOrders.values()) {
+      if (Number(row.federation) === numericId) {
+        return row;
+      }
+    }
+    return undefined;
+  }
+
   private overlayCoordinate(unit: FederationUnit): Coordinate | null {
     const source = this.positionSource();
     if (source === 'deployment') {
       return null;
     }
-    const orderRow = this.federationOrders.get(unit.id);
+    const orderRow = this.orderRowFor(unit.id);
     if (!orderRow) {
       return null;
     }
     const value =
       source === 'start'
         ? orderRow.start
-        : source === 'destination2'
-          ? orderRow.primary.destination2
-          : source === 'altDestination1'
-            ? orderRow.alternative.destination1
-            : orderRow.alternative.destination2;
+        : source === 'destination1'
+          ? orderRow.primary.destination1
+          : source === 'destination2'
+            ? orderRow.primary.destination2
+            : source === 'altDestination1'
+              ? orderRow.alternative.destination1
+              : orderRow.alternative.destination2;
     if (value.x === null || value.y === null || value.x < 1 || value.x > this.mapWidth || value.y < 1 || value.y > this.mapHeight) {
       return null;
     }
@@ -686,9 +773,6 @@ export class App {
   }
 
   protected toggleMapZoom(): void {
-    if (this.viewingOrderPositions()) {
-      return;
-    }
     this.mapZoomed = !this.mapZoomed;
   }
 
@@ -697,7 +781,7 @@ export class App {
   }
 
   protected isMapZoomed(): boolean {
-    return this.sheetView === 'deploy' && this.mapZoomed && !this.viewingOrderPositions();
+    return this.mapZoomed && !!this.selectedArmySide;
   }
 
   protected visibleColumns(): number[] {
@@ -751,13 +835,13 @@ export class App {
   }
 
   protected chipText(unit: FederationUnit): string {
-    if (this.chipLabelMode === 'fedType') {
+    if (!this.isOwnUnit(unit) || this.chipLabelMode === 'fedType') {
       return unit.troopCode;
     }
     if (this.chipLabelMode === 'fedNo') {
       return String(unit.id);
     }
-    const orderRow = this.federationOrders.get(unit.id);
+    const orderRow = this.orderRowFor(unit.id);
     if (!orderRow) {
       return '';
     }
@@ -927,7 +1011,9 @@ export class App {
       return;
     }
     const next = unplaced.find((unit) => unit.id > placedId) ?? unplaced[0];
-    this.highlightedFederationId = next?.id ?? null;
+    if (next) {
+      this.selectFederation(next.id, 'own');
+    }
   }
 
   private zoomWindow(): SetupZone | null {

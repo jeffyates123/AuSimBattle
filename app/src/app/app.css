@@ -682,3 +682,17 @@ input[type='date'] {
   padding-top: 8px;
   color: #b9d9ff;
 }
+
+.order-debug {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #10131a;
+  color: #d7e6ff;
+  font-size: 12px;
+  line-height: 1.45;
+}

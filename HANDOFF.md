@@ -74,16 +74,16 @@ Label alignment, which should be kept:
 
 ### Deploy
 
-The palette lists unplaced federations for the selected army, ordered by id. Two rows of buttons above the map title control every own chip. Loading a turn selects **Ty** and places chips on the order-row start x/y.
+The palette lists unplaced federations for the selected army, ordered by id. Two rows of buttons above the map title control every own chip. Loading a turn selects **Ty**, so chips show the troop code and stay on their deployment cells.
 
 | Row | Buttons |
 | --- | --- |
-| 1 | Ty, No, BG, Start, Ord, Add, Form, D1, D2 |
+| 1 | Ty, XY, No, BG, Start, Ord, Add, Form, D1, D2 |
 | 2 | ACond, AOrd, AAdd, AForm, AD1, AD2 |
 
-Position and label are separate. **Ty** through **Form** move chips to the order-row start x/y and set the label to that field. **D1** and **D2** move chips to those destinations and leave the current label. **AD1** and **AD2** move chips to the alternative destinations. If the current label is already **Add** or one of **ACond**, **AOrd**, **AAdd**, **AForm**, that label stays; otherwise it becomes **ACond**. The four alternative label buttons leave chips on the deployment placements and set the label. A missing coordinate leaves the chip on its deployment cell. Enemy chips always show the troop code. Formation `0` stays `0`; other codes show the formation name when it is known.
+**XY**, **D1**, **D2**, **AD1**, and **AD2** only move a federation that has that coordinate in its loaded order row. **XY** uses the order-row start x/y. The destination buttons use that destination. A federation with no coordinate for the selected button stays on its deployment cell. These buttons leave the chip text unchanged. Every other button only changes the text on the chip and leaves the chips on their deployment cells. Enemy chips always show the troop code. Formation `0` stays `0`; other codes show the formation name when it is known.
 
-While chips are on a start or destination coordinate, drag and click-to-place are off. Several own chips may share one destination cell; they split that cell. Deployment placement is still one federation per cell.
+While a coordinate button is selected, drag and click-to-place are off. Several own chips may share one coordinate; they split that cell. Deployment placement is still one federation per cell.
 
 - Drag a chip onto the setup zone, or click a chip and then click the map. After a click-place, the next higher unplaced id is armed. Clicking a chip on the map selects that federation.
 - Right-click a placed chip, or drag it back to the palette, to return it.

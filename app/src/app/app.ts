@@ -38,6 +38,7 @@ type ChipLabelMode =
 export class App {
   protected readonly chipDisplayModes = [
     { value: 'fedType', label: 'Fed type', short: 'Ty', row: 1 },
+    { value: 'xy', label: 'Start X/Y', short: 'XY', row: 1 },
     { value: 'fedNo', label: 'Fed no', short: 'No', row: 1 },
     { value: 'battalionGroup', label: 'Battalion Group', short: 'BG', row: 1 },
     { value: 'startAttack', label: 'Start Attack', short: 'Start', row: 1 },
@@ -120,6 +121,11 @@ export class App {
   protected federationOrders = new Map<number, FederationOrder>();
   protected highlightedFederationId: number | null = null;
   protected highlightedFederationKind: 'own' | 'enemy' = 'own';
+  private layoutRevision = 0;
+  private turnLoadGeneration = 0;
+  private chipIndexKey = '';
+  private readonly chipsByCell = new Map<string, Array<{ unit: FederationUnit; kind: 'own' | 'enemy' }>>();
+  private readonly noChips: Array<{ unit: FederationUnit; kind: 'own' | 'enemy' }> = [];
   private lastDropAt = 0;
   private armedClickAt = 0;
   private lastPaletteDragAt = 0;
@@ -147,22 +153,38 @@ export class App {
       return;
     }
 
+    const generation = ++this.turnLoadGeneration;
     this.loading = true;
     this.parseError = '';
     this.exportError = '';
     this.statusMessage = '';
+    this.chipIndexKey = '';
+    this.chipsByCell.clear();
+    this.changeDetector.markForCheck();
 
     try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (generation !== this.turnLoadGeneration) {
+        return;
+      }
       const text = await file.text();
+      if (generation !== this.turnLoadGeneration) {
+        return;
+      }
       this.parseTurnText(text);
     } catch (error) {
+      if (generation !== this.turnLoadGeneration) {
+        return;
+      }
       this.parseError = error instanceof Error ? error.message : 'Unable to parse this turn file.';
       this.parsedTurn = null;
       this.rows = [];
     } finally {
-      this.loading = false;
-      input.value = '';
-      this.changeDetector.markForCheck();
+      if (generation === this.turnLoadGeneration) {
+        this.loading = false;
+        input.value = '';
+        this.changeDetector.markForCheck();
+      }
     }
   }
 
@@ -582,14 +604,55 @@ export class App {
 
   protected cellChips(x: number, y: number): Array<{ unit: FederationUnit; kind: 'own' | 'enemy' }> {
     if (this.fedsHidden) {
-      return [];
+      return this.noChips;
     }
-    const own = this.ownChipsAt(x, y);
-    if (own.length) {
-      return own.map((unit) => ({ kind: 'own', unit }));
+    this.ensureChipIndex();
+    return this.chipsByCell.get(this.coordKey(x, y)) ?? this.noChips;
+  }
+
+  private ensureChipIndex(): void {
+    const key = `${this.layoutRevision}:${this.positionSource()}`;
+    if (key === this.chipIndexKey) {
+      return;
     }
-    const enemy = this.enemyByCoord.get(this.coordKey(x, y));
-    return enemy ? [{ kind: 'enemy', unit: enemy }] : [];
+    this.chipIndexKey = key;
+    this.chipsByCell.clear();
+    if (!this.selectedArmy) {
+      return;
+    }
+
+    const occupied = new Set<string>();
+    if (this.viewingOrderPositions()) {
+      for (const unit of this.selectedArmy.units) {
+        const coord = this.displayedOwnCoordinate(unit);
+        if (!coord) {
+          continue;
+        }
+        this.addOwnChip(occupied, coord.x, coord.y, unit);
+      }
+    } else {
+      this.ownByCoord.forEach((unit, cellKey) => {
+        occupied.add(cellKey);
+        this.chipsByCell.set(cellKey, [{ kind: 'own', unit }]);
+      });
+    }
+
+    this.enemyByCoord.forEach((unit, cellKey) => {
+      if (!occupied.has(cellKey)) {
+        this.chipsByCell.set(cellKey, [{ kind: 'enemy', unit }]);
+      }
+    });
+  }
+
+  private addOwnChip(occupied: Set<string>, x: number, y: number, unit: FederationUnit): void {
+    const cellKey = this.coordKey(x, y);
+    occupied.add(cellKey);
+    const existing = this.chipsByCell.get(cellKey);
+    if (existing) {
+      existing.push({ kind: 'own', unit });
+      return;
+    }
+    this.chipsByCell.set(cellKey, [{ kind: 'own', unit }]);
   }
 
   protected chipDragEnabled(unit: FederationUnit): boolean {
@@ -602,6 +665,8 @@ export class App {
 
   private positionSource(): 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | 'deployment' {
     switch (this.chipDisplayMode) {
+      case 'xy':
+        return 'start';
       case 'destination1':
         return 'destination1';
       case 'destination2':
@@ -610,13 +675,8 @@ export class App {
         return 'altDestination1';
       case 'altDestination2':
         return 'altDestination2';
-      case 'altCondition':
-      case 'altOrder':
-      case 'altAdditionalOrder':
-      case 'altFormation':
-        return 'deployment';
       default:
-        return 'start';
+        return 'deployment';
     }
   }
 
@@ -636,16 +696,11 @@ export class App {
 
   private orderRowFor(id: number): FederationOrder | undefined {
     const numericId = Number(id);
-    const direct = this.federationOrders.get(numericId);
-    if (direct) {
-      return direct;
+    if (!Number.isFinite(numericId)) {
+      return undefined;
     }
-    for (const row of this.federationOrders.values()) {
-      if (Number(row.federation) === numericId) {
-        return row;
-      }
-    }
-    return undefined;
+    const stored = this.federationOrders as Map<number | string, FederationOrder>;
+    return stored.get(numericId) ?? stored.get(String(numericId));
   }
 
   private overlayCoordinate(unit: FederationUnit): Coordinate | null {
@@ -675,20 +730,6 @@ export class App {
 
   private displayedOwnCoordinate(unit: FederationUnit): Coordinate | null {
     return this.overlayCoordinate(unit) ?? this.placements.get(unit.id) ?? null;
-  }
-
-  private ownChipsAt(x: number, y: number): FederationUnit[] {
-    if (!this.selectedArmy) {
-      return [];
-    }
-    if (!this.viewingOrderPositions()) {
-      const placed = this.ownByCoord.get(this.coordKey(x, y));
-      return placed ? [placed] : [];
-    }
-    return this.selectedArmy.units.filter((unit) => {
-      const coord = this.displayedOwnCoordinate(unit);
-      return coord?.x === x && coord.y === y;
-    });
   }
 
   protected cellFeatureClass(cell: MapCell): string {
@@ -823,12 +864,66 @@ export class App {
     return this.enemyArmy?.name ?? null;
   }
 
-  protected selectChipMode(mode: (typeof this.chipDisplayModes)[number]['value']): void {
-    if (mode === 'altDestination1' || mode === 'altDestination2') {
-      if (!this.isAltChipLabel(this.chipLabelMode) && this.chipLabelMode !== 'additionalOrder') {
-        this.chipLabelMode = 'altCondition';
+  protected chipModeHasValues(mode: (typeof this.chipDisplayModes)[number]['value']): boolean {
+    if (mode === 'fedType' || mode === 'fedNo') {
+      return (this.selectedArmy?.units.length ?? 0) > 0;
+    }
+    for (const orderRow of this.federationOrders.values()) {
+      if (this.orderFieldHasValue(orderRow, mode)) {
+        return true;
       }
-    } else if (mode !== 'destination1' && mode !== 'destination2') {
+    }
+    return false;
+  }
+
+  private orderFieldHasValue(
+    orderRow: FederationOrder,
+    mode: (typeof this.chipDisplayModes)[number]['value'],
+  ): boolean {
+    const coordinate = (value: { x: number | null; y: number | null } | undefined): boolean =>
+      !!value && (value.x !== null || value.y !== null);
+    switch (mode) {
+      case 'xy':
+        return coordinate(orderRow.start);
+      case 'battalionGroup':
+        return orderRow.battalionGroup !== null;
+      case 'startAttack':
+        return orderRow.primary.startAttack !== null;
+      case 'order':
+        return orderRow.primary.order !== null;
+      case 'additionalOrder':
+        return orderRow.primary.additionalOrder !== null;
+      case 'formation':
+        return orderRow.primary.formation !== null;
+      case 'destination1':
+        return coordinate(orderRow.primary.destination1);
+      case 'destination2':
+        return coordinate(orderRow.primary.destination2);
+      case 'altCondition':
+        return orderRow.alternative.condition !== null;
+      case 'altOrder':
+        return orderRow.alternative.order !== null;
+      case 'altAdditionalOrder':
+        return orderRow.alternative.additionalOrder !== null;
+      case 'altFormation':
+        return orderRow.alternative.formation !== null;
+      case 'altDestination1':
+        return coordinate(orderRow.alternative.destination1);
+      case 'altDestination2':
+        return coordinate(orderRow.alternative.destination2);
+      default:
+        return false;
+    }
+  }
+
+  protected selectChipMode(mode: (typeof this.chipDisplayModes)[number]['value']): void {
+    if (
+      mode !== 'xy' &&
+      mode !== 'destination1' &&
+      mode !== 'destination2' &&
+      mode !== 'altDestination1' &&
+      mode !== 'altDestination2'
+    ) {
       this.chipLabelMode = mode;
     }
     this.chipDisplayMode = mode;
@@ -1039,6 +1134,7 @@ export class App {
   }
 
   private rebuildOccupancyMaps(): void {
+    this.layoutRevision += 1;
     this.ownByCoord = new Map<string, FederationUnit>();
     this.enemyByCoord = new Map<string, FederationUnit>();
 
@@ -1266,10 +1362,6 @@ export class App {
     return value === null ? '' : String(value);
   }
 
-  private isAltChipLabel(mode: ChipLabelMode): boolean {
-    return mode === 'altCondition' || mode === 'altOrder' || mode === 'altAdditionalOrder' || mode === 'altFormation';
-  }
-
   private displayFormation(value: number | null): string {
     if (value === null) {
       return '';
@@ -1343,8 +1435,12 @@ export class App {
     this.placements = new Map<number, Coordinate>();
     this.federationOrders = new Map<number, FederationOrder>();
     this.rows = this.buildRows(this.parsedTurn.mapCells);
-    this.ownByCoord.clear();
-    this.enemyByCoord.clear();
+    this.ownByCoord = new Map<string, FederationUnit>();
+    this.enemyByCoord = new Map<string, FederationUnit>();
+    this.highlightedFederationId = null;
+    this.highlightedFederationKind = 'own';
+    this.chipIndexKey = '';
+    this.chipsByCell.clear();
     this.chipDisplayMode = 'fedType';
     this.chipLabelMode = 'fedType';
     if (this.parsedTurn.armies.length) {

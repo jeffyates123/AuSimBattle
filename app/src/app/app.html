@@ -242,7 +242,7 @@
     </section>
   }
 
-  @if (rows.length) {
+  @if (rows.length && !loading) {
     <section class="map panel">
       <div class="map-heading">
         <div class="chip-display-picker" role="radiogroup" aria-label="Federation chip display mode">
@@ -255,6 +255,7 @@
                     role="radio"
                     [attr.aria-checked]="chipDisplayMode === mode.value"
                     [class.active]="chipDisplayMode === mode.value"
+                    [class.has-values]="chipModeHasValues(mode.value)"
                     [title]="mode.label"
                     (click)="selectChipMode(mode.value)"
                   >{{ mode.short }}</button>
@@ -333,7 +334,7 @@
     </section>
   }
 
-  @if (rows.length) {
+  @if (rows.length && !loading) {
     <footer class="status-line order-debug">{{ selectedOrderDebug() }}</footer>
   }
   @if (statusMessage) {

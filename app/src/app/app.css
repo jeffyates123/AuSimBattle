@@ -366,6 +366,12 @@ input[type='date'] {
   background: #0f1a28;
 }
 
+.chip-display-picker button.has-values:not(.active) {
+  color: #e8edf5;
+  background: #243852;
+  border-color: #3f5678;
+}
+
 .chip-display-picker button.active {
   color: #142033;
   background: #d7e6ff;

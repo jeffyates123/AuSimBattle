@@ -55,10 +55,17 @@
     <div class="warning-backdrop">
       <div class="warning-dialog" role="dialog" aria-label="Use this value">
         <p>Federation {{ valueAction.unitId }} has {{ valueActionText() }}.</p>
-        <button type="button" class="sim-choice" (click)="paintSameValue()">Paint same value</button>
-        <button type="button" class="sim-choice" (click)="paintValueToAll()">Paint value to all</button>
-        <button type="button" class="sim-choice" (click)="paintValueToSameType()">Paint value to all {{ valueActionType() }}</button>
+        @if (valueAction.mode !== 'battalionGroup') {
+          <button type="button" class="sim-choice" (click)="paintSameValue()">Paint same value</button>
+          <button type="button" class="sim-choice" (click)="paintValueToAll()">Paint value to all</button>
+          <button type="button" class="sim-choice" (click)="paintValueToSameType()">Paint value to all {{ valueActionType() }}</button>
+        }
         <button type="button" class="sim-choice" (click)="changeValue()">Change value</button>
+        @if (valueAction.mode === 'battalionGroup') {
+          <button type="button" class="sim-choice" (click)="paintNextIncrement()">Paint next increment</button>
+          <button type="button" class="sim-choice" (click)="paintNextIncrementToAll()">Paint next increment to all</button>
+          <button type="button" class="sim-choice" (click)="paintNextIncrementToSameType()">Paint next increment to all {{ valueActionType() }}</button>
+        }
         <button type="button" class="sim-choice" (click)="valueAction = null">Cancel</button>
       </div>
     </div>

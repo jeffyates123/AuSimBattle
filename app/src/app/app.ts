@@ -81,7 +81,7 @@ export class App {
   protected showFedEffectiveness = false;
   protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string } | null = null;
   protected valueAction: { unitId: number; mode: EditableChipMode; value: number } | null = null;
-  private valuePaint: { mode: EditableChipMode; value: number } | null = null;
+  private valuePaint: { mode: EditableChipMode; value: number; increment: boolean } | null = null;
   private readonly orderCodes = new Set<number>();
   private readonly additionalOrderCodes = new Set<number>();
   private readonly formationCodes = new Set<number>([0]);
@@ -388,6 +388,10 @@ export class App {
         return;
       }
       this.awaitingEntrenchment = false;
+    }
+    if (this.chipDisplayMode === 'destination1') {
+      this.placeDestination1(x, y);
+      return;
     }
     if (!this.setupEditingEnabled()) {
       return;
@@ -875,13 +879,19 @@ export class App {
   }
 
   protected heightColor(height: number): string {
-    const stops = ['#ffffff', '#ffe500', '#9be59b', '#1f7a32', '#d3d3d3'];
-    if (height <= 4) {
-      return stops[height] ?? '#ffffff';
-    }
-    const mix = (height - 4) / 5;
-    const channel = Math.round(211 * (1 - mix));
-    return `rgb(${channel}, ${channel}, ${channel})`;
+    const stops = [
+      '#000000',
+      '#D7F7AE',
+      '#6ED63A',
+      '#1F8A3C',
+      '#FFE14A',
+      '#C9A04A',
+      '#A6A6A6',
+      '#7F7F7F',
+      '#545454',
+      '#2A2A2A',
+    ];
+    return stops[height] ?? stops[0];
   }
 
   protected cellLabel(cell: MapCell): string {
@@ -890,7 +900,7 @@ export class App {
   }
 
   protected glyphIsLight(height: number): boolean {
-    return height >= 6;
+    return height === 0 || (height >= 8 && height <= 9);
   }
 
   protected onZoneEdge(cell: MapCell, edge: 'n' | 's' | 'w' | 'e'): boolean {
@@ -1152,9 +1162,70 @@ export class App {
     if (!action) {
       return;
     }
-    this.valuePaint = { mode: action.mode, value: action.value };
+    this.valuePaint = { mode: action.mode, value: action.value, increment: false };
     this.valueAction = null;
     this.statusMessage = `Painting ${this.fieldLabel(action.mode)} ${this.displayFieldValue(action.mode, action.value)}. Click an empty federation.`;
+  }
+
+  protected paintNextIncrement(): void {
+    const action = this.valueAction;
+    if (!action || action.mode !== 'battalionGroup') {
+      return;
+    }
+    this.valuePaint = { mode: action.mode, value: action.value, increment: true };
+    this.valueAction = null;
+    this.statusMessage = `Painting the next battalion group after ${action.value}. Click an empty federation.`;
+  }
+
+  protected paintNextIncrementToAll(): void {
+    this.paintIncrementSequence();
+  }
+
+  protected paintNextIncrementToSameType(): void {
+    const troopCode = this.valueActionType();
+    if (!troopCode) {
+      return;
+    }
+    this.paintIncrementSequence(troopCode);
+  }
+
+  private paintIncrementSequence(troopCode?: string): void {
+    const action = this.valueAction;
+    if (!action || action.mode !== 'battalionGroup' || !this.selectedArmy) {
+      return;
+    }
+    const later: FederationUnit[] = [];
+    const earlier: FederationUnit[] = [];
+    for (const unit of this.selectedArmy.units) {
+      if (unit.id === action.unitId) {
+        continue;
+      }
+      if (troopCode && unit.troopCode !== troopCode) {
+        continue;
+      }
+      if (unit.id > action.unitId) {
+        later.push(unit);
+      } else {
+        earlier.push(unit);
+      }
+    }
+    later.sort((left, right) => left.id - right.id);
+    earlier.sort((left, right) => left.id - right.id);
+    let next = action.value;
+    let count = 0;
+    for (const unit of [...later, ...earlier]) {
+      next += 1;
+      if (!this.fieldValueAllowed(action.mode, next)) {
+        break;
+      }
+      this.writeField(unit.id, action.mode, next, false);
+      count += 1;
+    }
+    this.autoSaveDraft();
+    this.valuePaint = null;
+    this.valueAction = null;
+    const scope = troopCode ? `${troopCode} federations` : 'federations';
+    this.statusMessage = `Set battalion group ${action.value + 1} onward on ${count} ${scope}.`;
   }
 
   protected paintValueToAll(): void {
@@ -1217,8 +1288,16 @@ export class App {
     const current = this.fieldValue(unitId, mode);
     if (current === null) {
       if (this.valuePaint?.mode === mode) {
-        this.writeField(unitId, mode, this.valuePaint.value);
-        this.statusMessage = `Saved ${this.fieldLabel(mode)} ${this.displayFieldValue(mode, this.valuePaint.value)} on federation ${unitId}.`;
+        const nextValue = this.valuePaint.increment ? this.valuePaint.value + 1 : this.valuePaint.value;
+        if (!this.fieldValueAllowed(mode, nextValue)) {
+          this.statusMessage = this.fieldInvalidMessage(mode);
+          return true;
+        }
+        this.writeField(unitId, mode, nextValue);
+        if (this.valuePaint.increment) {
+          this.valuePaint = { mode, value: nextValue, increment: true };
+        }
+        this.statusMessage = `Saved ${this.fieldLabel(mode)} ${this.displayFieldValue(mode, nextValue)} on federation ${unitId}.`;
         return true;
       }
       this.openValueEntry(unitId, mode, '');
@@ -1568,6 +1647,49 @@ export class App {
     this.highlightFollowing(unitId);
     this.rebuildOccupancyMaps();
     this.autoSaveDraft();
+  }
+
+  private placeDestination1(x: number, y: number): void {
+    const unitId = this.highlightedFederationId;
+    if (
+      unitId === null ||
+      this.highlightedFederationKind !== 'own' ||
+      !this.selectedArmy?.units.some((unit) => unit.id === unitId)
+    ) {
+      this.statusMessage = 'Select a federation, then click the battlefield to set destination 1.';
+      return;
+    }
+    const orderRow = this.ensureOrderRow(unitId);
+    orderRow.primary.destination1 = { x, y };
+    this.layoutRevision += 1;
+    const next = this.nextBattlefieldFederation(unitId);
+    if (next) {
+      this.selectFederation(next.id, 'own');
+      this.statusMessage = `Set destination 1 for federation ${unitId} to ${x}/${y}. Federation ${next.id} is next.`;
+    } else {
+      this.highlightedFederationId = null;
+      this.statusMessage = `Set destination 1 for federation ${unitId} to ${x}/${y}.`;
+    }
+    this.autoSaveDraft();
+  }
+
+  private nextBattlefieldFederation(afterId: number): FederationUnit | undefined {
+    return this.selectedArmy?.units
+      .filter((unit) => unit.id > afterId && this.onBattlefieldInXy(unit.id))
+      .sort((left, right) => left.id - right.id)[0];
+  }
+
+  private onBattlefieldInXy(unitId: number): boolean {
+    const start = this.orderRowFor(unitId)?.start;
+    if (start && this.onMap(start.x, start.y)) {
+      return true;
+    }
+    const placed = this.placements.get(unitId);
+    return !!placed && this.onMap(placed.x, placed.y);
+  }
+
+  private onMap(x: number | null, y: number | null): boolean {
+    return x !== null && y !== null && x >= 1 && x <= this.mapWidth && y >= 1 && y <= this.mapHeight;
   }
 
   private highlightFollowing(placedId: number): void {

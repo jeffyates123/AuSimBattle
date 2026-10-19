@@ -84,6 +84,113 @@ describe('App', () => {
     expect(app.valueEntry?.error).toContain('not a valid order');
   });
 
+  it('paints the next battalion group onto later federations', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      selectChipMode(mode: 'battalionGroup'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      confirmValueEntry(event: Event): void;
+      paintNextIncrement(): void;
+      paintNextIncrementToAll(): void;
+      paintNextIncrementToSameType(): void;
+      chipText(unit: { id: number }): string;
+      selectedArmy: { units: Array<{ id: number; troopCode: string }> } | null;
+      valueEntry: { draft: string } | null;
+      valueAction: { unitId: number; mode: string; value: number } | null;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    app.selectChipMode('battalionGroup');
+    const click = new MouseEvent('click');
+    const text = (id: number) => app.chipText(app.selectedArmy!.units.find((unit) => unit.id === id)!);
+    app.onPaletteUnitClick(click, 1);
+    app.valueEntry!.draft = '4';
+    app.confirmValueEntry(new Event('submit'));
+    app.onPaletteUnitClick(click, 1);
+    expect(app.valueAction).toEqual({ unitId: 1, mode: 'battalionGroup', value: 4 });
+    app.paintNextIncrement();
+    app.onPaletteUnitClick(click, 2);
+    app.onPaletteUnitClick(click, 3);
+    expect(text(2)).toBe('5');
+    expect(text(3)).toBe('6');
+
+    app.onPaletteUnitClick(click, 1);
+    app.paintNextIncrementToSameType();
+    const troopCode = app.selectedArmy!.units.find((unit) => unit.id === 1)!.troopCode;
+    const sameType = app.selectedArmy!.units
+      .filter((unit) => unit.troopCode === troopCode)
+      .sort((left, right) => left.id - right.id);
+    let nextGroup = 4;
+    const sameTypeValues = new Map<number, string>([[1, '4']]);
+    for (const unit of sameType.filter((unit) => unit.id > 1)) {
+      nextGroup += 1;
+      sameTypeValues.set(unit.id, String(nextGroup));
+    }
+    for (const unit of sameType.filter((unit) => unit.id < 1)) {
+      nextGroup += 1;
+      sameTypeValues.set(unit.id, String(nextGroup));
+    }
+    for (const [id, value] of sameTypeValues) {
+      expect(text(id)).toBe(value);
+    }
+
+    app.onPaletteUnitClick(click, 1);
+    app.paintNextIncrementToAll();
+    const ordered = [...app.selectedArmy!.units].sort((left, right) => left.id - right.id);
+    let nextAll = 4;
+    const allValues = new Map<number, string>([[1, '4']]);
+    for (const unit of [...ordered.filter((unit) => unit.id > 1), ...ordered.filter((unit) => unit.id < 1)]) {
+      nextAll += 1;
+      if (nextAll > 99) {
+        break;
+      }
+      allValues.set(unit.id, String(nextAll));
+    }
+    for (const [id, value] of allValues) {
+      expect(text(id)).toBe(value);
+    }
+  });
+
+  it('sets destination 1 anywhere and advances to the next federation on the battlefield', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      selectChipMode(mode: 'xy' | 'destination1'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      cellChips(x: number, y: number): Array<{ unit: { id: number } }>;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      highlightedFederationId: number | null;
+      federationOrders: Map<number, FederationOrder>;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    app.selectChipMode('xy');
+    for (const [id, column] of [
+      [1, 0],
+      [2, 1],
+      [4, 2],
+    ] as const) {
+      app.onPaletteUnitClick(click, id);
+      app.onCellClick(click, zone.minX + column, zone.minY + 1);
+    }
+    app.selectChipMode('destination1');
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, 2, 20);
+    expect(app.federationOrders.get(1)?.primary.destination1).toEqual({ x: 2, y: 20 });
+    expect(app.cellChips(2, 20).some((chip) => chip.unit.id === 1)).toBe(true);
+    expect(app.highlightedFederationId).toBe(2);
+    app.onCellClick(click, 3, 21);
+    expect(app.federationOrders.get(2)?.primary.destination1).toEqual({ x: 3, y: 21 });
+    expect(app.highlightedFederationId).toBe(4);
+  });
+
   it('should render the load button before a turn is opened', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();

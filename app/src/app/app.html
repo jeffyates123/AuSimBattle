@@ -55,6 +55,9 @@
     <div class="warning-backdrop">
       <div class="warning-dialog" role="dialog" aria-label="Use this value">
         <p>Federation {{ valueAction.unitId }} has {{ valueActionText() }}.</p>
+        @if (valueAction.fresh) {
+          <button type="button" class="sim-choice" (click)="keepEnteredValue()">Keep entered value</button>
+        }
         @if (valueAction.mode !== 'battalionGroup') {
           <button type="button" class="sim-choice" (click)="paintSameValue()">Paint same value</button>
           <button type="button" class="sim-choice" (click)="paintValueToAll()">Paint value to all</button>

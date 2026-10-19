@@ -79,8 +79,8 @@ export class App {
   protected chipDisplayMode: (typeof this.chipDisplayModes)[number]['value'] = 'fedType';
   protected chipLabelMode: ChipLabelMode = 'fedType';
   protected showFedEffectiveness = false;
-  protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string } | null = null;
-  protected valueAction: { unitId: number; mode: EditableChipMode; value: number } | null = null;
+  protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string; fresh: boolean } | null = null;
+  protected valueAction: { unitId: number; mode: EditableChipMode; value: number; fresh?: boolean } | null = null;
   private valuePaint: { mode: EditableChipMode; value: number; increment: boolean } | null = null;
   private readonly orderCodes = new Set<number>();
   private readonly additionalOrderCodes = new Set<number>();
@@ -728,19 +728,12 @@ export class App {
     }
 
     const occupied = new Set<string>();
-    if (this.viewingOrderPositions()) {
-      for (const unit of this.selectedArmy.units) {
-        const coord = this.displayedOwnCoordinate(unit);
-        if (!coord) {
-          continue;
-        }
-        this.addOwnChip(occupied, coord.x, coord.y, unit);
+    for (const unit of this.selectedArmy.units) {
+      const coord = this.displayedOwnCoordinate(unit);
+      if (!coord) {
+        continue;
       }
-    } else {
-      this.ownByCoord.forEach((unit, cellKey) => {
-        occupied.add(cellKey);
-        this.chipsByCell.set(cellKey, [{ kind: 'own', unit }]);
-      });
+      this.addOwnChip(occupied, coord.x, coord.y, unit);
     }
 
     this.enemyByCoord.forEach((unit, cellKey) => {
@@ -770,16 +763,9 @@ export class App {
     return source === 'deployment' || source === 'start';
   }
 
-  private viewingOrderPositions(): boolean {
-    return this.positionSource() !== 'deployment';
-  }
-
   private ownSetupUnitAt(x: number, y: number): FederationUnit | undefined {
     if (!this.selectedArmy) {
       return undefined;
-    }
-    if (!this.viewingOrderPositions()) {
-      return this.ownByCoord.get(this.coordKey(x, y));
     }
     if (this.highlightedFederationKind === 'own' && this.highlightedFederationId !== null) {
       const highlighted = this.selectedArmy.units.find((unit) => unit.id === this.highlightedFederationId);
@@ -795,14 +781,16 @@ export class App {
   }
 
   private syncSetupCoordinate(unitId: number, coord: Coordinate | null): void {
-    if (this.positionSource() !== 'start') {
+    if (!coord) {
+      const orderRow = this.orderRowFor(unitId);
+      if (!orderRow) {
+        return;
+      }
+      orderRow.start = { x: null, y: null };
       return;
     }
-    const orderRow = this.orderRowFor(unitId);
-    if (!orderRow) {
-      return;
-    }
-    orderRow.start = coord ? { x: coord.x, y: coord.y } : { x: null, y: null };
+    const orderRow = this.ensureOrderRow(unitId);
+    orderRow.start = { x: coord.x, y: coord.y };
   }
 
   private positionSource(): 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | 'deployment' {
@@ -847,9 +835,31 @@ export class App {
 
   private overlayCoordinate(unit: FederationUnit): Coordinate | null {
     const source = this.positionSource();
-    if (source === 'deployment') {
+    if (source === 'deployment' || source === 'start') {
       return null;
     }
+    return this.orderCoordinate(unit, source);
+  }
+
+  private displayedOwnCoordinate(unit: FederationUnit): Coordinate | null {
+    const placed = this.placements.get(unit.id);
+    if (!placed) {
+      return null;
+    }
+    const source = this.positionSource();
+    if (source !== 'deployment' && source !== 'start') {
+      const destination = this.overlayCoordinate(unit);
+      if (destination) {
+        return destination;
+      }
+    }
+    return this.orderCoordinate(unit, 'start') ?? placed;
+  }
+
+  private orderCoordinate(
+    unit: FederationUnit,
+    source: 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2',
+  ): Coordinate | null {
     const orderRow = this.orderRowFor(unit.id);
     if (!orderRow) {
       return null;
@@ -868,10 +878,6 @@ export class App {
       return null;
     }
     return { x: value.x, y: value.y };
-  }
-
-  private displayedOwnCoordinate(unit: FederationUnit): Coordinate | null {
-    return this.overlayCoordinate(unit) ?? this.placements.get(unit.id) ?? null;
   }
 
   protected cellFeatureClass(cell: MapCell): string {
@@ -1153,8 +1159,23 @@ export class App {
     }
     this.valueEntry = null;
     this.valuePaint = null;
+    if (entry.fresh) {
+      this.valueAction = { unitId: entry.unitId, mode: entry.mode, value: parsed, fresh: true };
+      this.statusMessage = `Entered ${this.fieldLabel(entry.mode)} ${this.displayFieldValue(entry.mode, parsed)} on federation ${entry.unitId}.`;
+      return;
+    }
     this.writeField(entry.unitId, entry.mode, parsed);
     this.statusMessage = `Saved ${this.fieldLabel(entry.mode)} ${this.displayFieldValue(entry.mode, parsed)} on federation ${entry.unitId}.`;
+  }
+
+  protected keepEnteredValue(): void {
+    const action = this.valueAction;
+    if (!action) {
+      return;
+    }
+    this.writeField(action.unitId, action.mode, action.value);
+    this.valueAction = null;
+    this.statusMessage = `Saved ${this.fieldLabel(action.mode)} ${this.displayFieldValue(action.mode, action.value)} on federation ${action.unitId}.`;
   }
 
   protected paintSameValue(): void {
@@ -1162,6 +1183,7 @@ export class App {
     if (!action) {
       return;
     }
+    this.commitFreshValue();
     this.valuePaint = { mode: action.mode, value: action.value, increment: false };
     this.valueAction = null;
     this.statusMessage = `Painting ${this.fieldLabel(action.mode)} ${this.displayFieldValue(action.mode, action.value)}. Click an empty federation.`;
@@ -1172,6 +1194,7 @@ export class App {
     if (!action || action.mode !== 'battalionGroup') {
       return;
     }
+    this.commitFreshValue();
     this.valuePaint = { mode: action.mode, value: action.value, increment: true };
     this.valueAction = null;
     this.statusMessage = `Painting the next battalion group after ${action.value}. Click an empty federation.`;
@@ -1194,6 +1217,7 @@ export class App {
     if (!action || action.mode !== 'battalionGroup' || !this.selectedArmy) {
       return;
     }
+    this.commitFreshValue();
     const later: FederationUnit[] = [];
     const earlier: FederationUnit[] = [];
     for (const unit of this.selectedArmy.units) {
@@ -1233,6 +1257,7 @@ export class App {
     if (!action || !this.selectedArmy) {
       return;
     }
+    this.commitFreshValue();
     let count = 0;
     for (const unit of this.selectedArmy.units) {
       if (this.fieldValue(unit.id, action.mode) === null) {
@@ -1252,6 +1277,7 @@ export class App {
     if (!action || !this.selectedArmy || !troopCode) {
       return;
     }
+    this.commitFreshValue();
     let count = 0;
     for (const unit of this.selectedArmy.units) {
       if (unit.troopCode !== troopCode) {
@@ -1273,7 +1299,16 @@ export class App {
     }
     this.valuePaint = null;
     this.valueAction = null;
-    this.openValueEntry(action.unitId, action.mode, String(action.value));
+    this.openValueEntry(action.unitId, action.mode, String(action.value), false);
+  }
+
+  private commitFreshValue(): void {
+    const action = this.valueAction;
+    if (!action?.fresh) {
+      return;
+    }
+    this.writeField(action.unitId, action.mode, action.value, false);
+    action.fresh = false;
   }
 
   private beginValueEdit(unitId: number, detail: number): boolean {
@@ -1300,15 +1335,15 @@ export class App {
         this.statusMessage = `Saved ${this.fieldLabel(mode)} ${this.displayFieldValue(mode, nextValue)} on federation ${unitId}.`;
         return true;
       }
-      this.openValueEntry(unitId, mode, '');
+      this.openValueEntry(unitId, mode, '', true);
       return true;
     }
     this.valueAction = { unitId, mode, value: current };
     return true;
   }
 
-  private openValueEntry(unitId: number, mode: EditableChipMode, draft: string): void {
-    this.valueEntry = { unitId, mode, draft, error: '', hint: this.fieldHint(mode) };
+  private openValueEntry(unitId: number, mode: EditableChipMode, draft: string, fresh: boolean): void {
+    this.valueEntry = { unitId, mode, draft, error: '', hint: this.fieldHint(mode), fresh };
   }
 
   private editableChipMode(): EditableChipMode | null {

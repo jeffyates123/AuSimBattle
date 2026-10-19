@@ -1,7 +1,7 @@
               Month: February 1813
  The Rise of the Eagle  
                                                           Code: 863
-SUPERSONIC GAMES     ACCOUNT: 10008    Turn-No: 530                                                        
+SUPERSONIC GAMES     ACCOUNT: 00001    Turn-No: 530                                                        
 Old credit:                         £   21.20+                                                             
 Charge for this Turn:               £    2.00-                                                             
                                                     Basic charge:                       £    2.00+         
@@ -10,10 +10,8 @@ Charge for this Turn:               £    2.00-
                                                     Last turn's Postage:                £    0.00+         
 New credit:                         £   19.20+      Total charge:                       £    2.00+         
        * Supersonic Games * PO Box 1812, Galston, KA4 8WA *
-                                   AU 124 W  
-     Mr Christos Karas.                    
-     au.christos.karas@                     
-     gmail.com                               
+                                   AU 123 W  
+     Mr TEST AU
 Next turn due: TUESDAY 13TH OCTOBER 11AM.                        
 Ruler: THE DUKE OF HAZZARD      
 Relationships to foreign nations

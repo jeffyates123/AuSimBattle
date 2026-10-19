@@ -49,6 +49,7 @@ describe('App', () => {
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
       onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own'): void;
       confirmValueEntry(event: Event): void;
+      keepEnteredValue(): void;
       paintValueToAll(): void;
       paintValueToSameType(): void;
       chipText(unit: { id: number }): string;
@@ -67,6 +68,9 @@ describe('App', () => {
     app.valueEntry!.draft = '0';
     app.confirmValueEntry(new Event('submit'));
     const first = app.selectedArmy!.units[0];
+    expect(app.valueAction?.value).toBe(0);
+    expect(app.chipText(first)).toBe('');
+    app.keepEnteredValue();
     expect(app.chipText(first)).toBe('0');
 
     app.onPaletteUnitClick(click, 1);
@@ -91,6 +95,7 @@ describe('App', () => {
       selectChipMode(mode: 'battalionGroup'): void;
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
       confirmValueEntry(event: Event): void;
+      keepEnteredValue(): void;
       paintNextIncrement(): void;
       paintNextIncrementToAll(): void;
       paintNextIncrementToSameType(): void;
@@ -108,6 +113,7 @@ describe('App', () => {
     app.onPaletteUnitClick(click, 1);
     app.valueEntry!.draft = '4';
     app.confirmValueEntry(new Event('submit'));
+    app.keepEnteredValue();
     app.onPaletteUnitClick(click, 1);
     expect(app.valueAction).toEqual({ unitId: 1, mode: 'battalionGroup', value: 4 });
     app.paintNextIncrement();
@@ -191,6 +197,41 @@ describe('App', () => {
     expect(app.highlightedFederationId).toBe(4);
   });
 
+  it('keeps a placed chip on its start coordinate until a destination is shown', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      selectChipMode(mode: 'order' | 'destination1' | 'destination2'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      cellChips(x: number, y: number): Array<{ unit: { id: number } }>;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      federationOrders: Map<number, FederationOrder>;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    const x = zone.minX;
+    const y = zone.minY + 1;
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, x, y);
+    expect(app.federationOrders.get(1)?.start).toEqual({ x, y });
+    app.selectChipMode('order');
+    expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(true);
+    const orderRow = app.federationOrders.get(1)!;
+    orderRow.primary.destination2 = { x: 4, y: 22 };
+    app.selectChipMode('destination2');
+    expect(app.cellChips(4, 22).some((chip) => chip.unit.id === 1)).toBe(true);
+    expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(false);
+    app.selectChipMode('order');
+    expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(true);
+    app.selectChipMode('destination1');
+    expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(true);
+  });
+
   it('should render the load button before a turn is opened', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
@@ -208,6 +249,7 @@ describe('App', () => {
       federationOrders: Map<unknown, FederationOrder>;
       layoutRevision: number;
       parseError: string;
+      placements: Map<number, { x: number; y: number }>;
       selectChipMode(mode: 'xy'): void;
     };
     const openTurn = async (name: string) => {
@@ -261,7 +303,11 @@ describe('App', () => {
 
     const sample = app.selectedArmy?.units[0];
     expect(sample).toBeTruthy();
-    const chips = app.cellChips((sample!.id % 45) + 1, (sample!.id % 40) + 1);
+    const sampleX = (sample!.id % 45) + 1;
+    const sampleY = (sample!.id % 40) + 1;
+    app.placements.set(sample!.id, { x: sampleX, y: sampleY });
+    app.layoutRevision += 1;
+    const chips = app.cellChips(sampleX, sampleY);
     expect(chips.some((chip) => chip.unit.id === sample!.id)).toBe(true);
   });
 });

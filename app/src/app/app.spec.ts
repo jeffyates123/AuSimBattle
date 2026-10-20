@@ -6,6 +6,7 @@ import { FederationOrder } from './models/battle';
 
 describe('App', () => {
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [App],
     })
@@ -159,7 +160,55 @@ describe('App', () => {
     }
   });
 
-  it('sets destination 1 anywhere and advances to the next federation on the battlefield', async () => {
+  it('assigns the next federation number on first placement and clears it when removed', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      onCellContextMenu(event: MouseEvent, x: number, y: number): void;
+      selectChipMode(mode: 'fedType' | 'fedNo' | 'battalionGroup'): void;
+      chipText(unit: { id: number }): string;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      selectedArmy: { units: Array<{ id: number }> } | null;
+      federationOrders: Map<number, FederationOrder>;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    const text = (id: number) => app.chipText(app.selectedArmy!.units.find((unit) => unit.id === id)!);
+
+    app.selectChipMode('battalionGroup');
+    expect(text(9)).toBe('');
+    expect(text(1)).toBe('');
+    app.selectChipMode('fedType');
+
+    app.onPaletteUnitClick(click, 9);
+    app.onCellClick(click, zone.minX, zone.minY);
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, zone.minX + 1, zone.minY);
+    app.selectChipMode('fedNo');
+    expect(text(9)).toBe('1');
+    expect(text(1)).toBe('2');
+    app.selectChipMode('battalionGroup');
+    expect(text(9)).toBe('9');
+    expect(text(1)).toBe('1');
+
+    app.onCellContextMenu(new MouseEvent('contextmenu'), zone.minX, zone.minY);
+    expect(app.federationOrders.has(9)).toBe(false);
+    app.selectChipMode('fedNo');
+    expect(text(9)).toBe('');
+
+    app.onPaletteUnitClick(click, 4);
+    app.onCellClick(click, zone.minX, zone.minY);
+    expect(text(4)).toBe('1');
+    expect(app.federationOrders.get(4)?.battalionGroup).toBe(4);
+  });
+
+  it('sets destination 1 inside the setup area and advances to the next federation', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance as unknown as {
       onTurnFileSelected(event: Event): Promise<void>;
@@ -171,6 +220,7 @@ describe('App', () => {
       selectedArmySide: 'A' | 'B';
       highlightedFederationId: number | null;
       federationOrders: Map<number, FederationOrder>;
+      statusMessage: string;
     };
     const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
     const file = new File([body], '124D0113.txt', { type: 'text/plain' });
@@ -189,11 +239,18 @@ describe('App', () => {
     app.selectChipMode('destination1');
     app.onPaletteUnitClick(click, 1);
     app.onCellClick(click, 2, 20);
-    expect(app.federationOrders.get(1)?.primary.destination1).toEqual({ x: 2, y: 20 });
-    expect(app.cellChips(2, 20).some((chip) => chip.unit.id === 1)).toBe(true);
+    expect(app.federationOrders.get(1)?.primary.destination1).toEqual({ x: null, y: null });
+    expect(app.statusMessage).toContain('setup area');
+    const d1x = zone.minX + 4;
+    const d1y = zone.minY + 2;
+    app.onCellClick(click, d1x, d1y);
+    expect(app.federationOrders.get(1)?.primary.destination1).toEqual({ x: d1x, y: d1y });
+    expect(app.cellChips(d1x, d1y).some((chip) => chip.unit.id === 1)).toBe(true);
     expect(app.highlightedFederationId).toBe(2);
-    app.onCellClick(click, 3, 21);
-    expect(app.federationOrders.get(2)?.primary.destination1).toEqual({ x: 3, y: 21 });
+    const nextX = zone.minX + 5;
+    const nextY = zone.minY + 3;
+    app.onCellClick(click, nextX, nextY);
+    expect(app.federationOrders.get(2)?.primary.destination1).toEqual({ x: nextX, y: nextY });
     expect(app.highlightedFederationId).toBe(4);
   });
 
@@ -236,7 +293,8 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('button')?.textContent).toContain('Load New Turn');
+    const labels = Array.from(compiled.querySelectorAll('button')).map((button) => button.textContent?.trim() ?? '');
+    expect(labels).toContain('Load New Turn');
   });
 
   it('keeps a second turn load from scanning every federation on every cell', async () => {

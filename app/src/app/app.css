@@ -47,10 +47,15 @@
   width: 100%;
 }
 
-.sheet-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 18px;
+.battle-place {
+  grid-column: 9;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+  padding-left: 16px;
   font-weight: 700;
   color: #d7e6ff;
   white-space: nowrap;
@@ -347,23 +352,61 @@ input[type='date'] {
 
 .chip-display-picker {
   display: flex;
-  flex-direction: column;
+  flex-flow: row nowrap;
   align-items: flex-start;
+  justify-content: flex-end;
   gap: 4px;
-  max-width: calc(50% - 24px);
+  margin-left: auto;
 }
 
-.chip-display-row {
+.chip-mode {
   display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: max-content;
+  min-width: 48px;
+}
+
+.chip-mode.split {
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid #6d829c;
 }
 
 .chip-display-picker button {
+  width: 100%;
   padding: 2px 7px;
   color: #9eb0c8;
   background: #0f1a28;
+}
+
+.chip-mode-value {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  margin: 0;
+  padding: 0 2px;
+  border: 1px solid #3f5678;
+  border-radius: 4px;
+  background: #0f1a28;
+  color: #e8edf5;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+}
+
+span.chip-mode-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.chip-mode-value:disabled {
+  color: #9eb0c8;
 }
 
 .chip-display-picker button.has-values:not(.active) {
@@ -422,7 +465,7 @@ input[type='date'] {
 .map-heading {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   margin: 0 0 8px;
@@ -430,10 +473,8 @@ input[type='date'] {
 }
 
 .map-heading h2 {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   margin: 0;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -481,7 +522,7 @@ input[type='date'] {
 }
 
 .cell.strategic::before {
-  border: 2px solid #fff;
+  border: 3px solid #fff;
 }
 
 .cell.entrenched::before {
@@ -490,7 +531,7 @@ input[type='date'] {
 
 .cell.strategic.entrenched::before {
   border: 3px solid #333;
-  box-shadow: inset 0 0 0 2px #fff;
+  box-shadow: inset 0 0 0 3px #fff;
 }
 
 .map-grid.placing-entrenchment .cell {

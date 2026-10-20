@@ -1,6 +1,6 @@
 # AuSimBattle handoff
 
-Client-only Angular app for setting up an Austerlitz play-by-email sim battle. One screen, `app-root`, with an empty router. A loaded `.txt` turn fills the sheet header, the federation tray, and the 45×40 battlefield. The same placements are stored in a browser draft and written into a SIM sheet workbook.
+Angular app for setting up an Austerlitz play-by-email sim battle. The planner still runs in the browser, and there is now an optional beta server mode with login and stored test battles. A loaded `.txt` turn fills the sheet header, the federation tray, and the 45×40 battlefield. The same placements are stored in a browser draft and written into a SIM sheet workbook.
 
 `app/README.md` is the Angular CLI stub. This file is the handoff. Keep it as one document. Split only if a later slice adds a second screen, such as orders: leave this file as the index and add a short doc per screen.
 
@@ -23,6 +23,66 @@ Specs: `turn-parser.service.spec.ts` (reads `../124W0213.txt` and `../124D0113.t
 
 The app is zoneless (no `zone.js`). After `await file.text()` and the other file fetches, `App` calls `ChangeDetectorRef.markForCheck()`. Any new async UI update needs the same, or a signal.
 
+## Beta server mode (login + stored battles)
+
+Use this when you want testers to log in and send turn/sheet data for parser fixes.
+
+### Local or VPS run
+
+```text
+cd server
+npm install
+copy .env.example .env
+# set passwords and cookie settings in .env
+npm start
+```
+
+Required env vars:
+
+- `AUTH_AUTEST_PASSWORD`
+- `AUTH_AUADMIN_PASSWORD`
+
+Helpful env vars:
+
+- `PORT` (default `8080`)
+- `COOKIE_SECURE` (`true` on HTTPS, `false` for plain local HTTP testing)
+- `SESSION_TTL_HOURS` (default `24`)
+- `APP_DIST` (default `app/dist/ausim-battle/browser`)
+- `DATA_ROOT` (default `server/data/battles`)
+
+Build and serve flow for beta:
+
+```text
+cd app
+npm run build
+```
+
+Then start `server`. It serves `app/dist/ausim-battle/browser` and exposes:
+
+- `POST /api/login`, `POST /api/logout`, `GET /api/me`
+- `POST /api/battles` (stores loaded turn text, including parse failures)
+- `POST /api/battles/:id/sheet` (stores workbook copy after Save SIM)
+- `GET /api/admin/battles`, `GET /api/admin/battles/:id/turn`, `GET /api/admin/battles/:id/sheet` (admin only)
+
+Stored data layout:
+
+- `server/data/battles/{id}/turn.txt`
+- `server/data/battles/{id}/meta.json`
+- `server/data/battles/{id}/sheet.xlsx` (when Save SIM was used)
+
+### VPS + domain + HTTPS (Caddy)
+
+1. Create a small VPS (2 vCPU / 4 GB RAM is enough).
+2. Point your domain A record to the VPS IP.
+3. Install Node LTS and Caddy.
+4. Clone repo, run `npm install` in `app` and `server`.
+5. Build app once with `npm run build` in `app`.
+6. Create `server/.env` with both passwords and `COOKIE_SECURE=true`.
+7. Run `npm start` in `server` under a process manager.
+8. Configure Caddy to proxy your domain to `http://127.0.0.1:8080`.
+
+Caddy can issue and renew TLS certificates automatically for the domain.
+
 ## What the screen does
 
 1. First open shows **Austerlitz Simulated Battle Planner** and **Load New Turn**. There is no paste box.
@@ -43,7 +103,7 @@ Filled from the turn, except the fields the player sets:
 | Account | First `ACCOUNT:` in the file |
 | Player | First `Mr …` line, shown in capitals |
 | Process Date | Today, editable |
-| General Federation | Empty until typed. A number shows **Valid** beside it |
+| General Federation | Empty until typed. A number shows **Valid** beside it. Deployment area is on the same line to its right. Main terrain is the line under that |
 | Army | The side whose deployment-area name best matches State. Dropdown is `Army A : {nation}` or `Army B : {nation}` |
 
 The opponent line is the other army and its federation maximum.
@@ -81,11 +141,13 @@ The palette lists unplaced federations for the selected army, ordered by id. Two
 | 1 | Ty, XY, No, BG, Start, Ord, Add, Form, D1, D2 |
 | 2 | ACond, AOrd, AAdd, AForm, AD1, AD2 |
 
+**The Battle field** is left-aligned on one line with those buttons. The buttons are in that same line, right-aligned, with a gap and a dividing line after **D2**. The selected federation’s stored values fill the boxes under the buttons. Ty and No are shown only. A typed value is checked against the rules; an invalid entry is left unchanged. A typed coordinate must sit inside the selected army’s setup area, and it moves that chip to the new cell. Clearing a box removes that value.
+
 **XY**, **D1**, **D2**, **AD1**, and **AD2** are the coordinate views. A placed chip starts on its XY coordinate. It stays there for every other button. **D1**, **D2**, **AD1**, and **AD2** move it only when that destination is set; otherwise it stays on XY. A federation that is still in the tray stays there. These buttons leave the chip text unchanged. **Ty** and **No** only change the chip text. Enemy chips always show the troop code. Formation `0` stays `0`; other codes show the formation name when it is known.
 
-**BG**, **Start**, **Ord**, **Add**, **Form**, **ACond**, **AOrd**, **AAdd**, and **AForm** edit that field. A left click on an empty own federation asks for a value. Saving a valid code opens the same choices as a federation that already has a value, plus **Keep entered value**. **Keep entered value** stores it on that federation only. Cancel discards it. A right click clears a value. A left click on a federation that already has a value offers **Paint same value** (later clicks fill empty federations until another action), **Paint value to all** (every empty federation), **Paint value to all** of that troop type, or **Change value**. **BG** does not offer those three paint actions. It offers **Change value**, **Paint next increment** (each later click on an empty federation writes one more than the last), **Paint next increment to all**, and **Paint next increment to all** of that troop type. Those two write a unique sequence: the selected federation keeps its number, later federation numbers get the next values, then earlier ones continue the sequence. Battalion group accepts 0–99. Start attack accepts 0–25. Orders, additional orders, formations, and conditions must match the rules catalog. Formation also accepts `Co`, `Li`, `Sk`, and `Sq`.
+**BG**, **Start**, **Ord**, **Add**, **Form**, **ACond**, **AOrd**, **AAdd**, and **AForm** edit that field. A left click on an empty own federation asks for a value. Saving a valid code opens the same choices as a federation that already has a value, plus **Keep entered value**. **Keep entered value** stores it on that federation only. Cancel discards it. A right click clears a value. A left click on a federation that already has a value offers **Paint same value** (later clicks fill empty federations until another action), **Paint value to all** (every empty federation), **Paint value to all** of that troop type, or **Change value**. **BG** does not offer those three paint actions. It offers **Change value**, **Paint next increment** (each later click on an empty federation writes one more than the last), **Paint next increment to all**, and **Paint next increment to all** of that troop type. Those two write a unique sequence: the selected federation keeps its number, later federation numbers get the next values, then earlier ones continue the sequence. Battalion group accepts 0–110. Start attack accepts 0–25. Orders, additional orders, formations, and conditions must match the rules catalog. Formation also accepts `Co`, `Li`, `Sk`, and `Sq`.
 
-**Ty** and **XY** are the setup views: drag a chip onto the setup zone, or select one and click the zone. Placing writes that cell as the order-row start coordinate, so the chip stays where it was dropped. **D1** places the selected federation on any battlefield cell and stores that cell as destination 1. The next battlefield click sets destination 1 for the next higher federation number that already has a start coordinate on the battlefield. **D2**, **AD1**, and **AD2** only preview those destinations. Several own chips may share one coordinate; they split that cell. Deployment placement is still one federation per cell.
+**Ty** and **XY** are the setup views: drag a chip onto the setup zone, or select one and click the zone. The SIM sheet Fed No column is fixed at 1–110. A placement uses the lowest empty number, and never goes past the army’s federation maximum. BG is then set to that federation’s number from the turn, which is not the SIM sheet Fed No. Before a federation is placed, BG is empty. Placing writes that cell as the order-row start coordinate and fills the X/Y box for that chip. Removing it clears the whole record for that Fed No, so the number can be used again. Moving a federation that is already on the board keeps its Fed No. The next map click still places the next unplaced federation. **D1** places the selected federation on a cell inside the setup area and stores that cell as destination 1. A coordinate outside that area is rejected. The next battlefield click sets destination 1 for the next higher federation number that already has a start coordinate on the battlefield. **D2**, **AD1**, and **AD2** only preview those destinations. Several own chips may share one coordinate; they split that cell. Deployment placement is still one federation per cell.
 
 - Drag a chip onto the setup zone, or click a chip and then click the map. After a click-place, the next higher unplaced id is armed. Clicking a chip on the map selects that federation.
 - Right-click a placed chip, or drag it back to the palette, to return it.
@@ -110,8 +172,8 @@ Switching army reloads that side’s draft.
 - Open cells show the height digit. Feature cells show the feature character plus the digit (`#8`, `b7`, `W6`). The digit is light on heights 8, 9, and 0, and black on the others.
 - Setup rectangles are fixed black outlines: Army A is x 11–35, y 1–10. Army B is x 11–35, y 31–40. The same rectangles are copied under `battlefield.setupAreas` in the rules JSON. The component does not read that copy.
 - The selected setup zone is also tinted.
-- Strategic points from `Strategic points A/B:` get a white 2px border. A placed entrenchment gets a dark gray 3px border. A cell with both uses the gray border plus an inset white 2px ring. Those borders sit above the unit chip (`::before`, `z-index: 4`).
-- A `$` cell draws a 1px black inset on each edge that does not touch another `$` cell. That is the fortress wall outline, and it is still 1px.
+- Strategic points from `Strategic points A/B:` get a white 3px border. A placed entrenchment gets a dark gray 3px border. A cell with both uses the gray border plus an inset white 3px ring. Those borders sit above the unit chip (`::before`, `z-index: 4`).
+- A `$` cell draws a 3px black inset on each edge that does not touch another `$` cell. That is the fortress wall outline. A placed entrenchment is a 3px dark gray border.
 - Map heading shows the selected deployment area and `Main terrain`.
 - Cell size is 33×22px. Glyphs are 12px. Axis gutter stays 22px.
 
@@ -154,10 +216,9 @@ Download name is `SIM Sheet v0.6-{State} Sim {N}.xlsx`. If that name already exi
 
 - Order entry. Order rows load from the SIM sheet and the draft, show on the chips, and save back. There is still no form for typing an order. `app/src/app/models/battle.ts` has the row shape, and the rules JSON has the order catalog.
 - Movement, combat, morale, and victory tables are data only.
-- `$` fortress-wall outlines are 1px. The requested thickness is 3px.
 - Setup rectangles are hardcoded in `app.ts`, not read from the rules JSON.
 - Turn text does not supply federation start coordinates.
-- The router is unused.
+- Extra roles, password reset, and account management are not implemented (only `autest` and `auAdmin`).
 
 ## Map files
 

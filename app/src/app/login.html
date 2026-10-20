@@ -1,0 +1,32 @@
+<main class="login-shell">
+  <section class="login-card">
+    <h1>Austerlitz Simulated Battle Planner (Beta)</h1>
+    <form (submit)="submit($event)">
+      <label>
+        Login
+        <input name="username" [(ngModel)]="username" autocomplete="username" required />
+      </label>
+      <label>
+        Password
+        <input name="password" type="password" [(ngModel)]="password" autocomplete="current-password" required />
+      </label>
+      <label>
+        Your name
+        <input name="displayName" [(ngModel)]="displayName" autocomplete="name" required />
+      </label>
+      <p class="notice">
+        Beta notice: When you load a turn or save a SIM sheet, a copy is stored to help improve parsing and fix common
+        issues. This data will be treated as confidential. If you have concerns, please change sensitive details (such as
+        your name, game number, or account number) before uploading.
+      </p>
+      <label class="consent">
+        <input name="consent" type="checkbox" [(ngModel)]="consent" />
+        I understand that loaded turns and saved SIM sheets are stored during beta.
+      </label>
+      @if (error) {
+        <p class="error">{{ error }}</p>
+      }
+      <button type="submit" [disabled]="loading">{{ loading ? 'Signing in...' : 'Sign in' }}</button>
+    </form>
+  </section>
+</main>

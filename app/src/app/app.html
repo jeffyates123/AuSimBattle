@@ -1,4 +1,11 @@
 <main class="app-shell" [class.zoomed]="isMapZoomed()" [style.--cols]="visibleColumns().length">
+  <div class="load-row">
+    <span class="muted">Signed in as {{ sessionUser()?.displayName || sessionUser()?.username }}</span>
+    @if (isAdminUser()) {
+      <button type="button" class="paired-action" (click)="goToAdmin()">Admin</button>
+    }
+    <button type="button" class="paired-action" (click)="signOut()">Sign out</button>
+  </div>
   @if (missingSimWarning) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="File not found">
@@ -118,6 +125,9 @@
   @if (parseError) {
     <p class="error">{{ parseError }}</p>
   }
+  @if (betaStoreWarning) {
+    <p class="error">{{ betaStoreWarning }}</p>
+  }
 
   @if (parsedTurn && header) {
     <section class="sheet-head" [class.show-deploy]="sheetView === 'deploy'">
@@ -206,6 +216,10 @@
               @if (header.generalFederation) {
                 <span class="valid-flag">Valid</span>
               }
+            </span>
+            <span class="battle-place">
+              <span>{{ deploymentAreaLabel() }}</span>
+              <span>{{ mainTerrainLabel() }}</span>
             </span>
 
             <span>Account:</span>
@@ -300,30 +314,34 @@
   @if (rows.length && !loading) {
     <section class="map panel">
       <div class="map-heading">
+        <h2>The Battle field</h2>
         <div class="chip-display-picker" role="radiogroup" aria-label="Federation chip display mode">
-          @for (row of [1, 2]; track row) {
-            <div class="chip-display-row">
-              @for (mode of chipDisplayModes; track mode.value) {
-                @if (mode.row === row) {
-                  <button
-                    type="button"
-                    role="radio"
-                    [attr.aria-checked]="chipDisplayMode === mode.value"
-                    [class.active]="chipDisplayMode === mode.value"
-                    [class.has-values]="chipModeHasValues(mode.value)"
-                    [title]="mode.value === 'fedType' && showFedEffectiveness ? 'Fed type and EF' : mode.label"
-                    (click)="selectChipMode(mode.value)"
-                  >{{ mode.short }}</button>
-                }
+          @for (mode of chipDisplayModes; track mode.value + '-' + highlightedFederationId + '-' + highlightedFederationKind + '-' + selectedModeValue(mode.value)) {
+            <div class="chip-mode" [class.split]="mode.value === 'altCondition'">
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="chipDisplayMode === mode.value"
+                [class.active]="chipDisplayMode === mode.value"
+                [class.has-values]="chipModeHasValues(mode.value)"
+                [title]="mode.value === 'fedType' && showFedEffectiveness ? 'Fed type and EF' : mode.label"
+                (click)="selectChipMode(mode.value)"
+              >{{ mode.short }}</button>
+              @if (mode.value === 'fedType' || mode.value === 'fedNo') {
+                <span class="chip-mode-value">{{ selectedModeValue(mode.value) }}</span>
+              } @else {
+                <input
+                  class="chip-mode-value"
+                  size="4"
+                  [value]="selectedModeValue(mode.value)"
+                  [disabled]="!selectedModeEditable(mode.value)"
+                  [attr.aria-label]="mode.label"
+                  (change)="commitSelectedModeValue(mode.value, $event)"
+                />
               }
             </div>
           }
         </div>
-        <h2>The Battle field</h2>
-        <span class="sheet-meta">
-          <span>{{ deploymentAreaLabel() }}</span>
-          <span>{{ mainTerrainLabel() }}</span>
-        </span>
       </div>
       <div
         class="map-grid"

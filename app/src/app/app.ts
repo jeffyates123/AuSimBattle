@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { BattleHeader, FederationOrder } from './models/battle';
 import {
   ArmyData,
@@ -12,6 +13,8 @@ import {
   SetupZone,
 } from './models/turn';
 import { DraftService } from './services/draft.service';
+import { AuthService } from './services/auth.service';
+import { BetaDataService } from './services/beta-data.service';
 import { ExcelExportService, SimSheetSetup } from './services/excel-export.service';
 import { RulesService } from './services/rules.service';
 import { TurnParserService } from './services/turn-parser.service';
@@ -81,6 +84,7 @@ export class App {
   protected showFedEffectiveness = false;
   protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string; fresh: boolean } | null = null;
   protected valueAction: { unitId: number; mode: EditableChipMode; value: number; fresh?: boolean } | null = null;
+  protected betaStoreWarning = '';
   private valuePaint: { mode: EditableChipMode; value: number; increment: boolean } | null = null;
   private readonly orderCodes = new Set<number>();
   private readonly additionalOrderCodes = new Set<number>();
@@ -132,7 +136,10 @@ export class App {
   protected federationOrders = new Map<number, FederationOrder>();
   protected highlightedFederationId: number | null = null;
   protected highlightedFederationKind: 'own' | 'enemy' = 'own';
+  private armedFederationId: number | null = null;
+  private sheetFedNo = new Map<number, number>();
   private layoutRevision = 0;
+  private readonly chipPositionOverride = new Map<number, Coordinate>();
   private turnLoadGeneration = 0;
   private chipIndexKey = '';
   private readonly chipsByCell = new Map<string, Array<{ unit: FederationUnit; kind: 'own' | 'enemy' }>>();
@@ -140,6 +147,7 @@ export class App {
   private lastDropAt = 0;
   private armedClickAt = 0;
   private lastPaletteDragAt = 0;
+  private activeBattleId: string | null = null;
   protected rows: MapCell[][] = [];
   protected ownByCoord = new Map<string, FederationUnit>();
   protected enemyByCoord = new Map<string, FederationUnit>();
@@ -148,8 +156,11 @@ export class App {
   constructor(
     private readonly parser: TurnParserService,
     private readonly draft: DraftService,
+    private readonly auth: AuthService,
+    private readonly betaData: BetaDataService,
     private readonly excelExport: ExcelExportService,
     private readonly rules: RulesService,
+    private readonly router: Router,
     private readonly changeDetector: ChangeDetectorRef,
   ) {
     const orders = this.rules.getSimBattleStore().orders;
@@ -182,6 +193,7 @@ export class App {
     this.parseError = '';
     this.exportError = '';
     this.statusMessage = '';
+    this.betaStoreWarning = '';
     this.turnLoadChoice = null;
     this.chipIndexKey = '';
     this.chipsByCell.clear();
@@ -196,8 +208,23 @@ export class App {
       if (generation !== this.turnLoadGeneration) {
         return;
       }
-      this.parseTurnText(text);
-      await this.offerMatchingSim(generation);
+      let parseError: string | null = null;
+      let gameId: string | null = null;
+      let simulationNumber: number | null = null;
+      let army: ArmySide | null = null;
+      try {
+        this.parseTurnText(text);
+        gameId = this.header?.gameId ?? null;
+        simulationNumber = this.header?.simulationNumber ?? null;
+        army = this.selectedArmySide;
+        await this.offerMatchingSim(generation);
+      } catch (error) {
+        parseError = error instanceof Error ? error.message : 'Unable to parse this turn file.';
+        this.parseError = parseError;
+        this.parsedTurn = null;
+        this.rows = [];
+      }
+      await this.storeTurnForBeta(file.name, text, parseError, gameId, simulationNumber, army);
     } catch (error) {
       if (generation !== this.turnLoadGeneration) {
         return;
@@ -249,6 +276,7 @@ export class App {
     this.header.army = side === 'A' ? 'Army A' : 'Army B';
     this.placements = new Map<number, Coordinate>();
     this.federationOrders = new Map<number, FederationOrder>();
+    this.sheetFedNo = new Map<number, number>();
     this.highlightedFederationId = null;
     this.fortressEntrenchments = this.emptyFortressEntrenchments();
     this.awaitingEntrenchment = false;
@@ -263,6 +291,7 @@ export class App {
     if (options?.restoreDraft !== false) {
       this.tryRestoreDraft();
     }
+    this.ensureSheetNumbersForPlaced();
     this.rebuildOccupancyMaps();
     if (options?.saveDraft !== false) {
       this.autoSaveDraft();
@@ -288,6 +317,7 @@ export class App {
       return;
     }
     this.selectFederation(unitId, 'own');
+    this.armedFederationId = unitId;
   }
 
   protected onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
@@ -296,6 +326,9 @@ export class App {
       return;
     }
     this.selectFederation(unitId, kind);
+    if (kind === 'own') {
+      this.armedFederationId = unitId;
+    }
     if (kind === 'own' && this.setupEditingEnabled() && event.detail >= 2 && performance.now() - this.armedClickAt > 500) {
       this.returnToPool(unitId);
     }
@@ -361,6 +394,185 @@ export class App {
     ].join('  ');
   }
 
+  protected selectedModeValue(mode: (typeof this.chipDisplayModes)[number]['value']): string {
+    const id = this.highlightedFederationId;
+    if (id === null) {
+      return '';
+    }
+    const unit = this.federationUnit(id, this.highlightedFederationKind);
+    if (!unit) {
+      return '';
+    }
+    if (mode === 'fedType') {
+      return unit.troopCode;
+    }
+    if (mode === 'fedNo') {
+      return this.fedNoLabel(unit.id);
+    }
+    if (this.highlightedFederationKind !== 'own') {
+      return mode === 'xy' && unit.start ? `${unit.start.x}/${unit.start.y}` : '';
+    }
+    const row = this.orderRowFor(id);
+    if (mode === 'xy') {
+      if (row && (row.start.x !== null || row.start.y !== null)) {
+        return this.formatCoordinate(row.start);
+      }
+      const placed = this.placements.get(id);
+      return placed ? `${placed.x}/${placed.y}` : '';
+    }
+    if (!row) {
+      return '';
+    }
+    switch (mode) {
+      case 'battalionGroup':
+        return this.displayNumber(row.battalionGroup);
+      case 'startAttack':
+        return this.displayNumber(row.primary.startAttack);
+      case 'order':
+        return this.displayNumber(row.primary.order);
+      case 'additionalOrder':
+        return this.displayNumber(row.primary.additionalOrder);
+      case 'formation':
+        return this.displayFormation(row.primary.formation);
+      case 'destination1':
+        return this.formatCoordinate(row.primary.destination1);
+      case 'destination2':
+        return this.formatCoordinate(row.primary.destination2);
+      case 'altCondition':
+        return this.displayNumber(row.alternative.condition);
+      case 'altOrder':
+        return this.displayNumber(row.alternative.order);
+      case 'altAdditionalOrder':
+        return this.displayNumber(row.alternative.additionalOrder);
+      case 'altFormation':
+        return this.displayFormation(row.alternative.formation);
+      case 'altDestination1':
+        return this.formatCoordinate(row.alternative.destination1);
+      case 'altDestination2':
+        return this.formatCoordinate(row.alternative.destination2);
+      default:
+        return '';
+    }
+  }
+
+  protected selectedModeEditable(mode: (typeof this.chipDisplayModes)[number]['value']): boolean {
+    return this.highlightedFederationKind === 'own' && this.highlightedFederationId !== null && mode !== 'fedType' && mode !== 'fedNo';
+  }
+
+  protected commitSelectedModeValue(mode: (typeof this.chipDisplayModes)[number]['value'], event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const id = this.highlightedFederationId;
+    if (id === null || this.highlightedFederationKind !== 'own' || mode === 'fedType' || mode === 'fedNo') {
+      input.value = this.selectedModeValue(mode);
+      return;
+    }
+    const text = input.value.trim();
+    if (mode === 'xy' || mode === 'destination1' || mode === 'destination2' || mode === 'altDestination1' || mode === 'altDestination2') {
+      if (!text) {
+        this.writeCoordinate(id, mode, null);
+        input.value = '';
+        this.statusMessage = `Cleared ${this.coordinateLabel(mode)} on federation ${id}.`;
+        return;
+      }
+      const coord = this.parseCoordinate(text);
+      if (!coord || !this.inSelectedSetup(coord.x, coord.y)) {
+        this.statusMessage = coord
+          ? this.setupAreaMessage()
+          : 'Enter a coordinate as x/y.';
+        input.value = this.selectedModeValue(mode);
+        return;
+      }
+      this.writeCoordinate(id, mode, coord);
+      input.value = `${coord.x}/${coord.y}`;
+      this.statusMessage = `Saved ${this.coordinateLabel(mode)} ${coord.x}/${coord.y} on federation ${id}.`;
+      return;
+    }
+    if (!text) {
+      this.writeField(id, mode, null);
+      this.statusMessage = `Cleared ${this.fieldLabel(mode)} on federation ${id}.`;
+      return;
+    }
+    const parsed = this.parseFieldInput(mode, text);
+    if (parsed === null || !this.fieldValueAllowed(mode, parsed)) {
+      this.statusMessage = this.fieldInvalidMessage(mode);
+      input.value = this.selectedModeValue(mode);
+      this.changeDetector.markForCheck();
+      return;
+    }
+    this.writeField(id, mode, parsed);
+    input.value = this.displayFieldValue(mode, parsed);
+    this.statusMessage = `Saved ${this.fieldLabel(mode)} ${this.displayFieldValue(mode, parsed)} on federation ${id}.`;
+  }
+
+  private formatCoordinate(value: { x: number | null; y: number | null }): string {
+    if (value.x === null && value.y === null) {
+      return '';
+    }
+    if (value.x === null) {
+      return String(value.y);
+    }
+    if (value.y === null) {
+      return String(value.x);
+    }
+    return `${value.x}/${value.y}`;
+  }
+
+  private parseCoordinate(text: string): Coordinate | null {
+    const match = text.match(/^(\d{1,2})\s*[/,\s]\s*(\d{1,2})$/);
+    if (!match) {
+      return null;
+    }
+    const x = Number(match[1]);
+    const y = Number(match[2]);
+    if (x < 1 || x > this.mapWidth || y < 1 || y > this.mapHeight) {
+      return null;
+    }
+    return { x, y };
+  }
+
+  private setupAreaMessage(): string {
+    if (!this.selectedArmySide) {
+      return 'Coordinate must be inside the setup area.';
+    }
+    const zone = this.setupZones[this.selectedArmySide];
+    return `Coordinate must be inside the setup area (x ${zone.minX}–${zone.maxX}, y ${zone.minY}–${zone.maxY}).`;
+  }
+
+  private coordinateLabel(mode: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2'): string {
+    return this.chipDisplayModes.find((item) => item.value === mode)?.label ?? mode;
+  }
+
+  private writeCoordinate(
+    unitId: number,
+    mode: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2',
+    coord: Coordinate | null,
+  ): void {
+    const orderRow = this.ensureOrderRow(unitId);
+    const value = coord ? { x: coord.x, y: coord.y } : { x: null, y: null };
+    if (mode === 'xy') {
+      orderRow.start = value;
+    } else if (mode === 'destination1') {
+      orderRow.primary.destination1 = value;
+    } else if (mode === 'destination2') {
+      orderRow.primary.destination2 = value;
+    } else if (mode === 'altDestination1') {
+      orderRow.alternative.destination1 = value;
+    } else {
+      orderRow.alternative.destination2 = value;
+    }
+    if (coord) {
+      this.chipPositionOverride.set(unitId, { x: coord.x, y: coord.y });
+      if (mode === 'xy') {
+        this.placements.set(unitId, { x: coord.x, y: coord.y });
+        this.rebuildOccupancyMaps();
+      }
+    } else {
+      this.chipPositionOverride.delete(unitId);
+    }
+    this.layoutRevision += 1;
+    this.autoSaveDraft();
+  }
+
   protected onCellDragOver(event: DragEvent): void {
     event.preventDefault();
     if (event.dataTransfer) {
@@ -407,7 +619,8 @@ export class App {
       return;
     }
     this.armedClickAt = performance.now();
-    this.placeFederation(this.highlightedFederationId, x, y);
+    const unitId = this.armedFederationId ?? this.highlightedFederationId;
+    this.placeFederation(unitId, x, y);
   }
 
   protected onCellContextMenu(event: MouseEvent, x: number, y: number): void {
@@ -520,6 +733,23 @@ export class App {
 
   protected canExport(): boolean {
     return !!this.selectedArmy && !!this.selectedArmySide && !!this.header;
+  }
+
+  protected sessionUser(): { username: string; isAdmin: boolean; displayName: string } | null {
+    return this.auth.currentUser();
+  }
+
+  protected isAdminUser(): boolean {
+    return this.auth.currentUser()?.isAdmin === true;
+  }
+
+  protected async goToAdmin(): Promise<void> {
+    await this.router.navigateByUrl('/admin');
+  }
+
+  protected async signOut(): Promise<void> {
+    await this.auth.logout();
+    await this.router.navigateByUrl('/login');
   }
 
   protected async downloadSimSheet(): Promise<void> {
@@ -671,15 +901,18 @@ export class App {
     if (!this.selectedArmySide || !this.header) {
       return;
     }
+    this.ensureSheetNumbersForPlaced();
+    const exported = this.sheetExportMaps();
     await this.excelExport.exportSetup(
       this.header,
       this.selectedArmySide,
-      this.placements,
-      this.federationOrders,
+      exported.placements,
+      exported.orders,
       this.keptFortressEntrenchments(),
       fileName,
     );
     this.statusMessage = `SIM sheet saved as ${fileName}.`;
+    await this.storeSheetForBeta(fileName);
   }
 
   private async readSimFile(fileName: string): Promise<void> {
@@ -790,6 +1023,9 @@ export class App {
       return;
     }
     const orderRow = this.ensureOrderRow(unitId);
+    if (orderRow.battalionGroup === null) {
+      orderRow.battalionGroup = unitId;
+    }
     orderRow.start = { x: coord.x, y: coord.y };
   }
 
@@ -842,6 +1078,10 @@ export class App {
   }
 
   private displayedOwnCoordinate(unit: FederationUnit): Coordinate | null {
+    const override = this.chipPositionOverride.get(unit.id);
+    if (override) {
+      return override;
+    }
     const placed = this.placements.get(unit.id);
     if (!placed) {
       return null;
@@ -1076,6 +1316,10 @@ export class App {
       this.valueEntry = null;
       this.valueAction = null;
     }
+    if (this.chipPositionOverride.size) {
+      this.chipPositionOverride.clear();
+      this.layoutRevision += 1;
+    }
     if (mode === 'fedType' && this.chipDisplayMode === 'fedType') {
       this.showFedEffectiveness = !this.showFedEffectiveness;
     } else {
@@ -1098,7 +1342,7 @@ export class App {
       return this.fedTypeLabel(unit);
     }
     if (this.chipLabelMode === 'fedNo') {
-      return String(unit.id);
+      return this.fedNoLabel(unit.id);
     }
     const orderRow = this.orderRowFor(unit.id);
     if (!orderRow) {
@@ -1475,7 +1719,7 @@ export class App {
   private fieldValueAllowed(mode: EditableChipMode, value: number): boolean {
     switch (mode) {
       case 'battalionGroup':
-        return value >= 0 && value <= 99;
+        return value >= 0 && value <= 110;
       case 'startAttack':
         return value >= 0 && value <= 25;
       case 'order':
@@ -1499,7 +1743,7 @@ export class App {
   private fieldHint(mode: EditableChipMode): string {
     switch (mode) {
       case 'battalionGroup':
-        return 'Enter a battalion group from 0 to 99.';
+        return 'Enter a battalion group from 0 to 110.';
       case 'startAttack':
         return 'Enter a start-attack round from 0 to 25.';
       case 'order':
@@ -1519,7 +1763,7 @@ export class App {
   private fieldInvalidMessage(mode: EditableChipMode): string {
     switch (mode) {
       case 'battalionGroup':
-        return 'Enter a whole number from 0 to 99.';
+        return 'Enter a whole number from 0 to 110.';
       case 'startAttack':
         return 'Enter a whole number from 0 to 25.';
       case 'order':
@@ -1574,30 +1818,43 @@ export class App {
     }
 
     const occupied = new Set<string>();
+    const usedFedNos = new Set<number>();
     this.placements = new Map<number, Coordinate>();
+    this.sheetFedNo = new Map<number, number>();
     let skipped = 0;
+    const orderBySheetNo = new Map(setup.federationOrders.map((orderRow) => [orderRow.federation, orderRow]));
 
     for (const placement of setup.placements) {
-      const known = this.selectedArmy.units.some((unit) => unit.id === placement.id);
+      const orderRow = orderBySheetNo.get(placement.id);
+      const unitId = this.unitIdForSheetRow(placement.id, orderRow?.battalionGroup ?? null);
       const onMap =
         placement.x >= 1 && placement.x <= this.mapWidth && placement.y >= 1 && placement.y <= this.mapHeight;
       const key = this.coordKey(placement.x, placement.y);
-      if (!known || !onMap || occupied.has(key)) {
+      const fedNoFree = placement.id >= 1 && placement.id <= 110 && !usedFedNos.has(placement.id);
+      if (unitId === null || !onMap || occupied.has(key) || !fedNoFree || this.placements.has(unitId)) {
         skipped += 1;
         continue;
       }
-      this.placements.set(placement.id, { x: placement.x, y: placement.y });
+      this.placements.set(unitId, { x: placement.x, y: placement.y });
+      this.sheetFedNo.set(unitId, placement.id);
+      usedFedNos.add(placement.id);
       occupied.add(key);
     }
 
     this.federationOrders = new Map<number, FederationOrder>();
-    const knownIds = new Set(this.selectedArmy.units.map((unit) => unit.id));
     setup.federationOrders.forEach((orderRow) => {
-      if (!knownIds.has(orderRow.federation)) {
+      const unitId = this.unitIdForSheetRow(orderRow.federation, orderRow.battalionGroup);
+      if (unitId === null || !this.placements.has(unitId)) {
         return;
       }
-      this.federationOrders.set(orderRow.federation, this.normalizeFederationOrder(orderRow));
+      const stored = this.normalizeFederationOrder(orderRow);
+      stored.federation = unitId;
+      if (stored.battalionGroup === null) {
+        stored.battalionGroup = unitId;
+      }
+      this.federationOrders.set(unitId, stored);
     });
+    this.ensureSheetNumbersForPlaced();
 
     this.fortressEntrenchments = this.keptFortressEntrenchments(setup.fortressEntrenchments);
     this.awaitingEntrenchment = false;
@@ -1617,6 +1874,7 @@ export class App {
     this.clearAllPrompt = false;
     this.placements.clear();
     this.federationOrders.clear();
+    this.sheetFedNo.clear();
     this.highlightedFederationId = null;
     this.rebuildOccupancyMaps();
     this.statusMessage = 'All federations moved back to tray and their orders were cleared.';
@@ -1627,11 +1885,96 @@ export class App {
     if (!unitId || !this.placements.has(unitId)) {
       return;
     }
-    this.placements.delete(unitId);
-    this.syncSetupCoordinate(unitId, null);
+    const fedNo = this.sheetFedNo.get(unitId);
+    this.releaseFederation(unitId);
     this.rebuildOccupancyMaps();
-    this.statusMessage = `Federation ${unitId} moved back to tray.`;
+    this.statusMessage = fedNo
+      ? `Federation ${unitId} moved back to tray. Fed No ${fedNo} was cleared.`
+      : `Federation ${unitId} moved back to tray.`;
     this.autoSaveDraft();
+  }
+
+  private fedNoLabel(unitId: number): string {
+    const fedNo = this.sheetFedNo.get(unitId);
+    return fedNo ? String(fedNo) : '';
+  }
+
+  private nextSheetFedNo(): number | null {
+    const used = new Set(this.sheetFedNo.values());
+    const limit = Math.min(110, this.getPlacementLimit() ?? 110);
+    for (let fedNo = 1; fedNo <= limit; fedNo += 1) {
+      if (!used.has(fedNo)) {
+        return fedNo;
+      }
+    }
+    return null;
+  }
+
+  private assignSheetFedNo(unitId: number): number | null {
+    const existing = this.sheetFedNo.get(unitId);
+    if (existing) {
+      return existing;
+    }
+    const fedNo = this.nextSheetFedNo();
+    if (fedNo === null) {
+      return null;
+    }
+    this.sheetFedNo.set(unitId, fedNo);
+    this.ensureOrderRow(unitId).battalionGroup = unitId;
+    return fedNo;
+  }
+
+  private ensureSheetNumbersForPlaced(): void {
+    const placedIds = [...this.placements.keys()].sort((left, right) => left - right);
+    for (const unitId of placedIds) {
+      if (!this.sheetFedNo.has(unitId)) {
+        const fedNo = this.nextSheetFedNo();
+        if (fedNo === null) {
+          break;
+        }
+        this.sheetFedNo.set(unitId, fedNo);
+      }
+      const orderRow = this.ensureOrderRow(unitId);
+      if (orderRow.battalionGroup === null) {
+        orderRow.battalionGroup = unitId;
+      }
+    }
+  }
+
+  private releaseFederation(unitId: number): void {
+    this.placements.delete(unitId);
+    this.federationOrders.delete(unitId);
+    this.sheetFedNo.delete(unitId);
+    this.chipPositionOverride.delete(unitId);
+  }
+
+  private unitIdForSheetRow(sheetNo: number, battalionGroup: number | null): number | null {
+    const units = this.selectedArmy?.units ?? [];
+    if (battalionGroup !== null && units.some((unit) => unit.id === battalionGroup)) {
+      return battalionGroup;
+    }
+    if (units.some((unit) => unit.id === sheetNo)) {
+      return sheetNo;
+    }
+    return null;
+  }
+
+  private sheetExportMaps(): { placements: Map<number, Coordinate>; orders: Map<number, FederationOrder> } {
+    const placements = new Map<number, Coordinate>();
+    const orders = new Map<number, FederationOrder>();
+    this.placements.forEach((coord, unitId) => {
+      const fedNo = this.sheetFedNo.get(unitId);
+      if (!fedNo) {
+        return;
+      }
+      placements.set(fedNo, coord);
+      const orderRow = this.orderRowFor(unitId);
+      if (!orderRow) {
+        return;
+      }
+      orders.set(fedNo, { ...this.normalizeFederationOrder(orderRow), federation: fedNo });
+    });
+    return { placements, orders };
   }
 
   private placeFederation(unitId: number, x: number, y: number): void {
@@ -1664,22 +2007,34 @@ export class App {
       return;
     }
 
+    let replacedId: number | null = null;
     if (occupant) {
       if (source) {
         this.placements.set(occupant.id, source);
         this.syncSetupCoordinate(occupant.id, source);
+        this.statusMessage = `Swapped federation ${unitId} with ${occupant.id}.`;
       } else {
-        this.placements.delete(occupant.id);
-        this.syncSetupCoordinate(occupant.id, null);
+        replacedId = occupant.id;
+        this.releaseFederation(occupant.id);
       }
-      this.statusMessage = `Swapped federation ${unitId} with ${occupant.id}.`;
-    } else {
-      this.statusMessage = `Placed federation ${unitId} at ${x}/${y}.`;
+    }
+
+    const fedNo = this.assignSheetFedNo(unitId);
+    if (fedNo === null) {
+      this.statusMessage = 'Drop rejected: no free federation number.';
+      return;
+    }
+    if (replacedId !== null) {
+      this.statusMessage = `Replaced federation ${replacedId} with ${unitId} as Fed No ${fedNo}.`;
+    } else if (!occupant) {
+      this.statusMessage = `Placed federation ${unitId} as Fed No ${fedNo} at ${x}/${y}.`;
     }
 
     this.placements.set(unitId, { x, y });
     this.syncSetupCoordinate(unitId, { x, y });
-    this.highlightFollowing(unitId);
+    this.chipPositionOverride.delete(unitId);
+    this.selectFederation(unitId, 'own');
+    this.armNextUnplaced(unitId);
     this.rebuildOccupancyMaps();
     this.autoSaveDraft();
   }
@@ -1692,6 +2047,10 @@ export class App {
       !this.selectedArmy?.units.some((unit) => unit.id === unitId)
     ) {
       this.statusMessage = 'Select a federation, then click the battlefield to set destination 1.';
+      return;
+    }
+    if (!this.inSelectedSetup(x, y)) {
+      this.statusMessage = this.setupAreaMessage();
       return;
     }
     const orderRow = this.ensureOrderRow(unitId);
@@ -1727,16 +2086,14 @@ export class App {
     return x !== null && y !== null && x >= 1 && x <= this.mapWidth && y >= 1 && y <= this.mapHeight;
   }
 
-  private highlightFollowing(placedId: number): void {
+  private armNextUnplaced(placedId: number): void {
     const unplaced = this.getUnplacedUnits().filter((unit) => unit.id !== placedId);
     if (!unplaced.length) {
-      this.highlightedFederationId = null;
+      this.armedFederationId = null;
       return;
     }
     const next = unplaced.find((unit) => unit.id > placedId) ?? unplaced[0];
-    if (next) {
-      this.selectFederation(next.id, 'own');
-    }
+    this.armedFederationId = next?.id ?? null;
   }
 
   private zoomWindow(): SetupZone | null {
@@ -1794,11 +2151,16 @@ export class App {
     this.placements.forEach((coord, id) => {
       placementsRecord[id] = coord;
     });
+    const sheetFedNos: Record<number, number> = {};
+    this.sheetFedNo.forEach((fedNo, unitId) => {
+      sheetFedNos[unitId] = fedNo;
+    });
     this.draft.save(gameId, sim, this.selectedArmySide, {
       header: this.header,
       placements: placementsRecord,
       fortressEntrenchments: this.keptFortressEntrenchments(),
       federationOrders: this.federationOrdersRecord(),
+      sheetFedNos,
     });
   }
 
@@ -1822,6 +2184,7 @@ export class App {
     }
 
     this.placements.clear();
+    this.sheetFedNo = new Map<number, number>();
     this.selectedArmy.units.forEach((unit) => {
       const coord = draft.placements[unit.id];
       if (coord && this.inZone(coord, zone) && !this.enemyHasCoord(coord.x, coord.y)) {
@@ -1837,6 +2200,16 @@ export class App {
         this.federationOrders.set(orderRow.federation, this.normalizeFederationOrder(orderRow));
       });
     }
+    if (draft.sheetFedNos) {
+      Object.entries(draft.sheetFedNos).forEach(([unitId, fedNo]) => {
+        const id = Number(unitId);
+        const number = Number(fedNo);
+        if (this.placements.has(id) && number >= 1 && number <= 110) {
+          this.sheetFedNo.set(id, number);
+        }
+      });
+    }
+    this.ensureSheetNumbersForPlaced();
   }
 
   private buildRows(cells: MapCell[]): MapCell[][] {
@@ -1881,13 +2254,13 @@ export class App {
 
     const shadows: string[] = [];
     if (!this.isSpecialCoordinate(cell.x - 1, cell.y)) {
-      shadows.push('inset 1px 0 0 #000');
+      shadows.push('inset 3px 0 0 #000');
     }
-    shadows.push('inset -1px 0 0 #000');
+    shadows.push('inset -3px 0 0 #000');
     if (!this.isSpecialCoordinate(cell.x, cell.y - 1)) {
-      shadows.push('inset 0 1px 0 #000');
+      shadows.push('inset 0 3px 0 #000');
     }
-    shadows.push('inset 0 -1px 0 #000');
+    shadows.push('inset 0 -3px 0 #000');
     return shadows.join(', ');
   }
 
@@ -2080,5 +2453,46 @@ export class App {
       return;
     }
     this.statusMessage = `Turn parsed. Army ${preferredArmySide} selected.`;
+  }
+
+  private async storeTurnForBeta(
+    fileName: string,
+    turnText: string,
+    parseError: string | null,
+    gameId: string | null,
+    simulationNumber: number | null,
+    army: ArmySide | null,
+  ): Promise<void> {
+    const result = await this.betaData.createBattle({
+      fileName,
+      turnText,
+      gameId,
+      simulationNumber,
+      army,
+      parseError,
+    });
+    if (result.result === 'stored') {
+      this.activeBattleId = result.id;
+      return;
+    }
+    this.activeBattleId = null;
+    if (result.result === 'failed') {
+      this.betaStoreWarning = 'Beta copy could not be stored on the server.';
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  private async storeSheetForBeta(fileName: string): Promise<void> {
+    if (!this.activeBattleId) {
+      return;
+    }
+    const workbook = this.excelExport.readSavedWorkbook(fileName);
+    if (!workbook) {
+      return;
+    }
+    const stored = await this.betaData.attachSheet(this.activeBattleId, fileName, workbook);
+    if (stored === 'failed') {
+      this.betaStoreWarning = 'SIM sheet download worked, but the beta copy could not be stored.';
+    }
   }
 }

@@ -7,6 +7,7 @@ export interface SetupDraft {
   placements: Record<number, Coordinate>;
   fortressEntrenchments?: Array<{ x: number | null; y: number | null }>;
   federationOrders?: Record<number, FederationOrder>;
+  sheetFedNos?: Record<number, number>;
 }
 
 @Injectable({ providedIn: 'root' })

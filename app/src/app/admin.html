@@ -1,0 +1,55 @@
+<main class="admin-shell">
+  <header class="admin-head">
+    <h1>Beta Battles</h1>
+    <div class="actions">
+      <button type="button" (click)="openPlanner()">Open planner</button>
+      <button type="button" (click)="refresh()">Refresh</button>
+      <button type="button" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  @if (loading) {
+    <p>Loading battle list...</p>
+  } @else if (error) {
+    <p class="error">{{ error }}</p>
+  } @else if (!battles.length) {
+    <p>No battles stored yet.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Name</th>
+          <th>Login</th>
+          <th>Game</th>
+          <th>Sim</th>
+          <th>Army</th>
+          <th>Parse</th>
+          <th>Turn</th>
+          <th>Sheet</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (battle of battles; track battle.id) {
+          <tr>
+            <td>{{ formatDate(battle.createdAt) }}</td>
+            <td>{{ battle.displayName }}</td>
+            <td>{{ battle.account }}</td>
+            <td>{{ battle.gameId || '-' }}</td>
+            <td>{{ battle.simulationNumber ?? '-' }}</td>
+            <td>{{ battle.army || '-' }}</td>
+            <td>{{ battle.parseError ? 'Failed' : 'OK' }}</td>
+            <td><a [href]="turnLink(battle.id)">Turn</a></td>
+            <td>
+              @if (battle.sheetFileName) {
+                <a [href]="sheetLink(battle.id)">Sheet</a>
+              } @else {
+                <span class="muted">Pending</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</main>

@@ -303,15 +303,14 @@ export class ExcelExportService {
   }
 
   async matchingFileNames(header: BattleHeader): Promise<string[]> {
-    const saved = new Set(this.savedNames(header));
     const names = new Set<string>();
     const base = this.fileName(header);
-    if (saved.has(base) || (await this.workbookExists(base))) {
+    if (await this.workbookExists(base)) {
       names.add(base);
     }
     for (let version = 1; version <= 99; version += 1) {
       const name = this.fileName(header, version);
-      if (saved.has(name) || (await this.workbookExists(name))) {
+      if (await this.workbookExists(name)) {
         names.add(name);
         continue;
       }
@@ -336,23 +335,6 @@ export class ExcelExportService {
     }
   }
 
-  private savedNames(header: BattleHeader): string[] {
-    const base = this.fileName(header);
-    const stem = base.replace(/\.xlsx$/i, '');
-    const names: string[] = [];
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const key = localStorage.key(index);
-      if (!key?.startsWith(this.savedPrefix)) {
-        continue;
-      }
-      const name = key.slice(this.savedPrefix.length);
-      if (name === base || new RegExp(`^${this.escapeRegExp(stem)}_\\d+\\.xlsx$`, 'i').test(name)) {
-        names.push(name);
-      }
-    }
-    return names;
-  }
-
   private versionNumber(base: string, fileName: string): number {
     if (fileName === base) {
       return 0;
@@ -363,10 +345,6 @@ export class ExcelExportService {
 
   private savedKey(fileName: string): string {
     return `${this.savedPrefix}${fileName}`;
-  }
-
-  private escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   private toBase64(data: ArrayBuffer): string {

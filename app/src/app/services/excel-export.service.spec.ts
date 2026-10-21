@@ -40,7 +40,7 @@ describe('ExcelExportService.readSetup', () => {
     ).toBe('SIM Sheet v0.6-Denmark Sim 201_2.xlsx');
   });
 
-  it('treats a saved version as a match when the server does not have it', async () => {
+  it('ignores a browser-only copy when the file is not on disk', async () => {
     const header = {
       state: 'Denmark',
       accountId: null,
@@ -57,7 +57,7 @@ describe('ExcelExportService.readSetup', () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => new Response(null, { status: 404 })) as typeof fetch;
     try {
-      await expect(service.matchingFileNames(header)).resolves.toEqual([version]);
+      await expect(service.matchingFileNames(header)).resolves.toEqual([]);
       expect(new Uint8Array(service.readSavedWorkbook(version) ?? new ArrayBuffer(0))).toEqual(
         new Uint8Array([1, 2, 3]),
       );

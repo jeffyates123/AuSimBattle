@@ -52,12 +52,12 @@ export class App {
     { value: 'formation', label: 'Formation', short: 'Form', row: 1 },
     { value: 'destination1', label: 'Destination 1', short: 'D1', row: 1 },
     { value: 'destination2', label: 'Destination 2', short: 'D2', row: 1 },
-    { value: 'altCondition', label: 'Alt condition', short: 'ACond', row: 2 },
-    { value: 'altOrder', label: 'Alt order', short: 'AOrd', row: 2 },
-    { value: 'altAdditionalOrder', label: 'Alt additional order', short: 'AAdd', row: 2 },
-    { value: 'altFormation', label: 'Alt formation', short: 'AForm', row: 2 },
-    { value: 'altDestination1', label: 'Alt destination 1', short: 'AD1', row: 2 },
-    { value: 'altDestination2', label: 'Alt destination 2', short: 'AD2', row: 2 },
+    { value: 'altCondition', label: 'Alternative Condition', short: 'ACond', row: 2 },
+    { value: 'altOrder', label: 'Alternative Order', short: 'AOrd', row: 2 },
+    { value: 'altAdditionalOrder', label: 'Alternative Additional Order', short: 'AAdd', row: 2 },
+    { value: 'altFormation', label: 'Alternative Formation', short: 'AForm', row: 2 },
+    { value: 'altDestination1', label: 'Alternative Destination 1', short: 'AD1', row: 2 },
+    { value: 'altDestination2', label: 'Alternative Destination 2', short: 'AD2', row: 2 },
   ] as const;
   protected readonly setupZones: Record<ArmySide, SetupZone> = {
     A: { minX: 11, maxX: 35, minY: 1, maxY: 10 },
@@ -84,6 +84,18 @@ export class App {
   protected showFedEffectiveness = false;
   protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string; fresh: boolean } | null = null;
   protected valueAction: { unitId: number; mode: EditableChipMode; value: number; fresh?: boolean } | null = null;
+  protected chipModeMenu: { unitId: number } | null = null;
+  protected readonly chipSettingModes = this.chipDisplayModes.filter(
+    (mode) =>
+      mode.value !== 'fedType' &&
+      mode.value !== 'fedNo' &&
+      mode.value !== 'battalionGroup' &&
+      mode.value !== 'xy' &&
+      mode.value !== 'destination1' &&
+      mode.value !== 'destination2' &&
+      mode.value !== 'altDestination1' &&
+      mode.value !== 'altDestination2',
+  );
   protected betaStoreWarning = '';
   private valuePaint: { mode: EditableChipMode; value: number; increment: boolean } | null = null;
   private readonly orderCodes = new Set<number>();
@@ -322,6 +334,13 @@ export class App {
 
   protected onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
     event.stopPropagation();
+    if (kind === 'own' && event.detail >= 2) {
+      this.closeUnitMenus();
+      if (this.setupEditingEnabled()) {
+        this.returnToPool(unitId);
+      }
+      return;
+    }
     if (kind === 'own' && this.beginValueEdit(unitId, event.detail)) {
       return;
     }
@@ -329,69 +348,41 @@ export class App {
     if (kind === 'own') {
       this.armedFederationId = unitId;
     }
-    if (kind === 'own' && this.setupEditingEnabled() && event.detail >= 2 && performance.now() - this.armedClickAt > 500) {
-      this.returnToPool(unitId);
+  }
+
+  protected chooseChipModeMenu(mode: (typeof this.chipDisplayModes)[number]['value']): void {
+    const unitId = this.chipModeMenu?.unitId;
+    this.chipModeMenu = null;
+    if (!unitId) {
+      return;
     }
+    this.selectChipMode(mode);
+    this.selectFederation(unitId, 'own');
+    this.armedFederationId = unitId;
+    this.beginValueEdit(unitId, 1);
+  }
+
+  private openChipModeMenu(unitId: number): void {
+    this.valueEntry = null;
+    this.valueAction = null;
+    this.selectFederation(unitId, 'own');
+    this.armedFederationId = unitId;
+    this.chipModeMenu = { unitId };
+  }
+
+  private closeUnitMenus(): void {
+    this.valueEntry = null;
+    this.valueAction = null;
+    this.chipModeMenu = null;
   }
 
   protected onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
-    const mode = this.editableChipMode();
-    if (!mode || kind !== 'own') {
-      return;
-    }
     event.preventDefault();
     event.stopPropagation();
-    if (this.fieldValue(unitId, mode) === null) {
+    if (kind !== 'own') {
       return;
     }
-    this.writeField(unitId, mode, null);
-    this.statusMessage = `Cleared ${this.fieldLabel(mode)} on federation ${unitId}.`;
-  }
-
-  protected selectedOrderDebug(): string {
-    const id = this.highlightedFederationId;
-    if (id === null) {
-      return 'Selected federation: none';
-    }
-    const unit = this.federationUnit(id, this.highlightedFederationKind);
-    const row = this.highlightedFederationKind === 'own' ? this.orderRowFor(id) : undefined;
-    if (!row) {
-      const troop = unit?.troopCode ?? '';
-      const start = unit?.start ? `${unit.start.x}/${unit.start.y}` : '—';
-      const side = this.highlightedFederationKind === 'enemy' ? 'Enemy' : 'Fed';
-      return `${side} ${id} ${troop} start ${start}`.replace(/\s+/g, ' ').trim();
-    }
-    const coord = (value: { x: number | null; y: number | null }): string => {
-      if (value.x === null && value.y === null) {
-        return '—';
-      }
-      if (value.x === null) {
-        return String(value.y);
-      }
-      if (value.y === null) {
-        return String(value.x);
-      }
-      return `${value.x}/${value.y}`;
-    };
-    const num = (value: number | null): string => (value === null ? '—' : String(value));
-    const form = (value: number | null): string => this.displayFormation(value) || '—';
-    return [
-      `Fed ${id}`,
-      `BG ${num(row.battalionGroup)}`,
-      `XY ${coord(row.start)}`,
-      `Start ${num(row.primary.startAttack)}`,
-      `Ord ${num(row.primary.order)}`,
-      `Add ${num(row.primary.additionalOrder)}`,
-      `Form ${form(row.primary.formation)}`,
-      `D1 ${coord(row.primary.destination1)}`,
-      `D2 ${coord(row.primary.destination2)}`,
-      `Cond ${num(row.alternative.condition)}`,
-      `AOrd ${num(row.alternative.order)}`,
-      `AAdd ${num(row.alternative.additionalOrder)}`,
-      `AForm ${form(row.alternative.formation)}`,
-      `AD1 ${coord(row.alternative.destination1)}`,
-      `AD2 ${coord(row.alternative.destination2)}`,
-    ].join('  ');
+    this.openChipModeMenu(unitId);
   }
 
   protected selectedModeValue(mode: (typeof this.chipDisplayModes)[number]['value']): string {
@@ -475,7 +466,7 @@ export class App {
         return;
       }
       const coord = this.parseCoordinate(text);
-      if (!coord || !this.inSelectedSetup(coord.x, coord.y)) {
+      if (!coord || (mode === 'xy' && !this.inSelectedSetup(coord.x, coord.y))) {
         this.statusMessage = coord
           ? this.setupAreaMessage()
           : 'Enter a coordinate as x/y.';
@@ -601,8 +592,8 @@ export class App {
       }
       this.awaitingEntrenchment = false;
     }
-    if (this.chipDisplayMode === 'destination1') {
-      this.placeDestination1(x, y);
+    if (this.isDestinationMode(this.chipDisplayMode) && !(this.armedUnitNeedsPlacement() && this.inSelectedSetup(x, y))) {
+      this.placeDestination(this.chipDisplayMode, x, y);
       return;
     }
     if (!this.setupEditingEnabled()) {
@@ -610,6 +601,7 @@ export class App {
     }
     const own = this.ownSetupUnitAt(x, y);
     if (event.detail >= 2 && own) {
+      this.closeUnitMenus();
       if (performance.now() - this.armedClickAt > 500) {
         this.returnToPool(own.id);
       }
@@ -635,7 +627,7 @@ export class App {
     if (!own) {
       return;
     }
-    this.returnToPool(own.id);
+    this.openChipModeMenu(own.id);
   }
 
   protected beginEntrenchmentPlacement(event: MouseEvent): void {
@@ -875,6 +867,28 @@ export class App {
     this.autoSaveDraft();
   }
 
+  protected async onSimFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    this.missingSimWarning = null;
+    this.loadingSim = true;
+    this.exportError = '';
+    this.changeDetector.markForCheck();
+    try {
+      const setup = await this.excelExport.readSetup(await file.arrayBuffer());
+      this.applySimSheet(setup, file.name);
+    } catch (error) {
+      this.exportError = error instanceof Error ? error.message : 'Unable to read this SIM sheet.';
+    } finally {
+      this.loadingSim = false;
+      this.changeDetector.markForCheck();
+    }
+  }
+
   protected async loadChosenSim(fileName: string): Promise<void> {
     this.simFileChoices = null;
     this.loadingSim = true;
@@ -916,8 +930,7 @@ export class App {
   }
 
   private async readSimFile(fileName: string): Promise<void> {
-    const fetched = await this.fetchWorkbook(fileName);
-    const buffer = fetched ?? this.excelExport.readSavedWorkbook(fileName);
+    const buffer = await this.fetchWorkbook(fileName);
     if (!buffer) {
       this.missingSimWarning = fileName;
       return;
@@ -993,7 +1006,19 @@ export class App {
 
   private setupEditingEnabled(): boolean {
     const source = this.positionSource();
-    return source === 'deployment' || source === 'start';
+    return (
+      source === 'deployment' ||
+      source === 'start' ||
+      source === 'destination1' ||
+      source === 'destination2' ||
+      source === 'altDestination1' ||
+      source === 'altDestination2'
+    );
+  }
+
+  private armedUnitNeedsPlacement(): boolean {
+    const unitId = this.armedFederationId;
+    return unitId !== null && !this.placements.has(unitId);
   }
 
   private ownSetupUnitAt(x: number, y: number): FederationUnit | undefined {
@@ -2039,30 +2064,45 @@ export class App {
     this.autoSaveDraft();
   }
 
-  private placeDestination1(x: number, y: number): void {
+  private isDestinationMode(
+    mode: (typeof this.chipDisplayModes)[number]['value'],
+  ): mode is 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' {
+    return mode === 'destination1' || mode === 'destination2' || mode === 'altDestination1' || mode === 'altDestination2';
+  }
+
+  private placeDestination(mode: 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2', x: number, y: number): void {
     const unitId = this.highlightedFederationId;
+    const label = this.coordinateLabel(mode);
     if (
       unitId === null ||
       this.highlightedFederationKind !== 'own' ||
       !this.selectedArmy?.units.some((unit) => unit.id === unitId)
     ) {
-      this.statusMessage = 'Select a federation, then click the battlefield to set destination 1.';
+      this.statusMessage = `Select a federation, then click the battlefield to set ${label}.`;
       return;
     }
-    if (!this.inSelectedSetup(x, y)) {
-      this.statusMessage = this.setupAreaMessage();
+    if (!this.onMap(x, y)) {
+      this.statusMessage = 'Coordinate must be on the battlefield.';
       return;
     }
     const orderRow = this.ensureOrderRow(unitId);
-    orderRow.primary.destination1 = { x, y };
+    if (mode === 'destination1') {
+      orderRow.primary.destination1 = { x, y };
+    } else if (mode === 'destination2') {
+      orderRow.primary.destination2 = { x, y };
+    } else if (mode === 'altDestination1') {
+      orderRow.alternative.destination1 = { x, y };
+    } else {
+      orderRow.alternative.destination2 = { x, y };
+    }
     this.layoutRevision += 1;
     const next = this.nextBattlefieldFederation(unitId);
     if (next) {
       this.selectFederation(next.id, 'own');
-      this.statusMessage = `Set destination 1 for federation ${unitId} to ${x}/${y}. Federation ${next.id} is next.`;
+      this.statusMessage = `Set ${label} for federation ${unitId} to ${x}/${y}. Federation ${next.id} is next.`;
     } else {
       this.highlightedFederationId = null;
-      this.statusMessage = `Set destination 1 for federation ${unitId} to ${x}/${y}.`;
+      this.statusMessage = `Set ${label} for federation ${unitId} to ${x}/${y}.`;
     }
     this.autoSaveDraft();
   }
@@ -2448,6 +2488,7 @@ export class App {
     this.valueEntry = null;
     this.valueAction = null;
     this.valuePaint = null;
+    this.chipModeMenu = null;
     if (this.parsedTurn.armies.length) {
       this.pickArmy(preferredArmySide, { restoreDraft: false, saveDraft: false });
       return;

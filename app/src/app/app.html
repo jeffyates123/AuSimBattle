@@ -9,8 +9,11 @@
   @if (missingSimWarning) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="File not found">
-        <p>File "{{ missingSimWarning }}" not found</p>
-        <button type="button" (click)="missingSimWarning = null">OK</button>
+        <p>File "{{ missingSimWarning }}" not found.</p>
+        <div class="warning-actions">
+          <button type="button" (click)="simFile.click()">Find file</button>
+          <button type="button" (click)="missingSimWarning = null">Cancel</button>
+        </div>
       </div>
     </div>
   }
@@ -55,6 +58,17 @@
             <button type="button" (click)="valueEntry = null">Cancel</button>
           </div>
         </form>
+      </div>
+    </div>
+  }
+  @if (chipModeMenu) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="dialog" aria-label="Federation settings">
+        <p>Settings for federation {{ chipModeMenu.unitId }}</p>
+        @for (mode of chipSettingModes; track mode.value) {
+          <button type="button" class="sim-choice" (click)="chooseChipModeMenu(mode.value)">{{ mode.label }}</button>
+        }
+        <button type="button" (click)="chipModeMenu = null">Cancel</button>
       </div>
     </div>
   }
@@ -111,6 +125,7 @@
     </div>
   }
   <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
+  <input #simFile id="simFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onSimFileSelected($event)" hidden />
 
   @if (!(parsedTurn && header)) {
     <div class="load-row">
@@ -186,8 +201,8 @@
             <button
               type="button"
               class="info-tip"
-              title="Drag federation chips onto your setup zone on The Battle field map. Right-click to remove a deployed federation. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
-              aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click to remove a deployed federation. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
+              title="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
+              aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
             >i</button>
           }
           @if (selectedArmy && parsedTurn.armies.length) {
@@ -408,9 +423,6 @@
     </section>
   }
 
-  @if (rows.length && !loading) {
-    <footer class="status-line order-debug">{{ selectedOrderDebug() }}</footer>
-  }
   @if (statusMessage) {
     <footer class="status-line">
       {{ statusMessage }}

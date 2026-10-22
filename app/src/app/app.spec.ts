@@ -61,6 +61,7 @@ describe('App', () => {
       onTurnFileSelected(event: Event): Promise<void>;
       selectChipMode(mode: 'startAttack' | 'order'): void;
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      changeValue(): void;
       onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own'): void;
       chipModeMenu: { unitId: number } | null;
       confirmValueEntry(event: Event): void;
@@ -100,6 +101,7 @@ describe('App', () => {
 
     app.selectChipMode('order');
     app.onPaletteUnitClick(click, 2);
+    app.changeValue();
     app.valueEntry!.draft = '7';
     app.confirmValueEntry(new Event('submit'));
     expect(app.valueEntry?.error).toContain('not a valid order');
@@ -183,7 +185,7 @@ describe('App', () => {
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
       onCellClick(event: MouseEvent, x: number, y: number): void;
       onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void;
-      selectChipMode(mode: 'fedType' | 'fedNo' | 'battalionGroup'): void;
+      selectChipMode(mode: 'fedType' | 'fedNo' | 'battalionGroup' | 'xy'): void;
       chipText(unit: { id: number }): string;
       setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
       selectedArmySide: 'A' | 'B';
@@ -202,6 +204,7 @@ describe('App', () => {
     expect(text(1)).toBe('');
     app.selectChipMode('fedType');
 
+    app.selectChipMode('xy');
     app.onPaletteUnitClick(click, 9);
     app.onCellClick(click, zone.minX, zone.minY);
     app.onPaletteUnitClick(click, 1);
@@ -218,8 +221,10 @@ describe('App', () => {
     app.selectChipMode('fedNo');
     expect(text(9)).toBe('');
 
+    app.selectChipMode('xy');
     app.onPaletteUnitClick(click, 4);
     app.onCellClick(click, zone.minX, zone.minY);
+    app.selectChipMode('fedNo');
     expect(text(4)).toBe('1');
     expect(app.federationOrders.get(4)?.battalionGroup).toBe(4);
   });
@@ -327,11 +332,66 @@ describe('App', () => {
     expect(app.placements.get(8)).toEqual({ x: zone.minX + 2, y: zone.minY });
   });
 
+  it('drags a federation to a destination anywhere on the battlefield and leaves it still in other modes', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      selectChipMode(mode: 'xy' | 'destination1' | 'order'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      onCellDrop(event: { preventDefault(): void; dataTransfer: { getData(format: string): string } }, x: number, y: number): void;
+      chipDragEnabled(unit: { id: number }): boolean;
+      cellChips(x: number, y: number): Array<{ unit: { id: number } }>;
+      placements: Map<number, { x: number; y: number }>;
+      federationOrders: Map<number, FederationOrder>;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      selectedArmy: { units: Array<{ id: number }> } | null;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    const unit = app.selectedArmy!.units.find((item) => item.id === 6)!;
+    app.onPaletteUnitClick(click, 6);
+    app.onCellClick(click, zone.minX, zone.minY);
+    expect(app.placements.get(6)).toEqual({ x: zone.minX, y: zone.minY });
+
+    app.selectChipMode('order');
+    expect(app.chipDragEnabled(unit)).toBe(false);
+    app.onCellDrop(
+      { preventDefault() {}, dataTransfer: { getData: () => '6' } },
+      zone.minX + 3,
+      zone.minY,
+    );
+    expect(app.placements.get(6)).toEqual({ x: zone.minX, y: zone.minY });
+    app.onCellDrop(
+      { preventDefault() {}, dataTransfer: { getData: () => '8' } },
+      zone.minX + 1,
+      zone.minY,
+    );
+    expect(app.placements.get(8)).toEqual({ x: zone.minX + 1, y: zone.minY });
+
+    app.selectChipMode('destination1');
+    app.onCellDrop(
+      { preventDefault() {}, dataTransfer: { getData: () => '6' } },
+      3,
+      18,
+    );
+    expect(app.federationOrders.get(6)?.primary.destination1).toEqual({ x: 3, y: 18 });
+    expect(app.federationOrders.get(6)?.primary.order).toBe(0);
+    expect(app.federationOrders.get(6)?.primary.formation).toBe(1);
+    expect(app.cellChips(3, 18).some((chip) => chip.unit.id === 6)).toBe(true);
+    app.selectChipMode('order');
+    expect(app.cellChips(3, 18).some((chip) => chip.unit.id === 6)).toBe(false);
+  });
+
   it('keeps a placed chip on its start coordinate until a destination is shown', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance as unknown as {
       onTurnFileSelected(event: Event): Promise<void>;
-      selectChipMode(mode: 'order' | 'destination1' | 'destination2'): void;
+      selectChipMode(mode: 'xy' | 'order' | 'destination1' | 'destination2'): void;
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
       onCellClick(event: MouseEvent, x: number, y: number): void;
       cellChips(x: number, y: number): Array<{ unit: { id: number } }>;
@@ -346,9 +406,12 @@ describe('App', () => {
     const click = new MouseEvent('click');
     const x = zone.minX;
     const y = zone.minY + 1;
+    app.selectChipMode('xy');
     app.onPaletteUnitClick(click, 1);
     app.onCellClick(click, x, y);
     expect(app.federationOrders.get(1)?.start).toEqual({ x, y });
+    expect(app.federationOrders.get(1)?.primary.order).toBe(0);
+    expect(app.federationOrders.get(1)?.primary.formation).toBe(1);
     app.selectChipMode('order');
     expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(true);
     const orderRow = app.federationOrders.get(1)!;
@@ -486,5 +549,109 @@ describe('App', () => {
     app.onChipClick(new MouseEvent('click', { detail: 2 }), 9, 'own');
     expect(app.placements.has(9)).toBe(false);
     expect(app.valueEntry).toBeNull();
+  });
+
+  it('removes a federation from the board or clears the selected destination from the right-click menu', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own'): void;
+      selectChipMode(mode: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'order'): void;
+      boardRemovalLabel(): string | null;
+      removeFederationFromMenu(): void;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      placements: Map<number, { x: number; y: number }>;
+      federationOrders: Map<number, FederationOrder>;
+      cellChips(x: number, y: number): Array<{ unit: { id: number } }>;
+      chipModeMenu: { unitId: number } | null;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    const x = zone.minX;
+    const y = zone.minY + 1;
+    app.selectChipMode('xy');
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, x, y);
+
+    app.onChipContextMenu(new MouseEvent('contextmenu'), 1, 'own');
+    expect(app.boardRemovalLabel()).toBe('Remove federation from board');
+    app.removeFederationFromMenu();
+    expect(app.placements.has(1)).toBe(false);
+    expect(app.chipModeMenu).toBeNull();
+
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, x, y);
+    const orderRow = app.federationOrders.get(1)!;
+    orderRow.primary.destination1 = { x: 4, y: 22 };
+    orderRow.primary.destination2 = { x: 6, y: 24 };
+    orderRow.alternative.destination1 = { x: 8, y: 26 };
+    app.selectChipMode('destination2');
+    app.onChipContextMenu(new MouseEvent('contextmenu'), 1, 'own');
+    expect(app.boardRemovalLabel()).toBe('Remove federation from current Destination x/y');
+    app.removeFederationFromMenu();
+
+    expect(app.placements.get(1)).toEqual({ x, y });
+    expect(app.federationOrders.get(1)?.primary.destination2).toEqual({ x: null, y: null });
+    expect(app.federationOrders.get(1)?.primary.destination1).toEqual({ x: 4, y: 22 });
+    expect(app.federationOrders.get(1)?.alternative.destination1).toEqual({ x: 8, y: 26 });
+    expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(true);
+    expect(app.cellChips(6, 24).some((chip) => chip.unit.id === 1)).toBe(false);
+  });
+
+  it('clears the right-clicked coordinate and leaves the other destinations', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      selectChipMode(mode: 'xy'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      onCoordinateModeContextMenu(event: MouseEvent, mode: 'xy' | 'destination1' | 'destination2' | 'order'): void;
+      clearCoordinateMenuValue(): void;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      federationOrders: Map<number, FederationOrder>;
+      coordinateClearMenu: string | null;
+      highlightedFederationId: number | null;
+      statusMessage: string;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    app.selectChipMode('xy');
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, zone.minX, zone.minY + 1);
+    const orderRow = app.federationOrders.get(1)!;
+    orderRow.primary.destination1 = { x: 4, y: 22 };
+    orderRow.primary.destination2 = { x: 6, y: 24 };
+    const menuEvent = new MouseEvent('contextmenu', { cancelable: true });
+
+    app.onCoordinateModeContextMenu(menuEvent, 'order');
+    expect(menuEvent.defaultPrevented).toBe(false);
+    expect(app.coordinateClearMenu).toBeNull();
+
+    app.onCoordinateModeContextMenu(menuEvent, 'destination1');
+    expect(app.coordinateClearMenu).toBe('destination1');
+    app.coordinateClearMenu = null;
+
+    app.onCoordinateModeContextMenu(new MouseEvent('contextmenu', { cancelable: true }), 'destination1');
+    app.clearCoordinateMenuValue();
+    expect(app.coordinateClearMenu).toBeNull();
+    expect(app.federationOrders.get(1)?.primary.destination1).toEqual({ x: null, y: null });
+    expect(app.federationOrders.get(1)?.primary.destination2).toEqual({ x: 6, y: 24 });
+    expect(app.federationOrders.get(1)?.start).toEqual({ x: zone.minX, y: zone.minY + 1 });
+
+    app.highlightedFederationId = null;
+    app.onCoordinateModeContextMenu(new MouseEvent('contextmenu', { cancelable: true }), 'destination2');
+    app.clearCoordinateMenuValue();
+    expect(app.statusMessage).toContain('Select a federation');
+    expect(app.federationOrders.get(1)?.primary.destination2).toEqual({ x: 6, y: 24 });
   });
 });

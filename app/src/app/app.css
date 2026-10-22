@@ -176,14 +176,6 @@ select option {
   color: #142033;
 }
 
-.valid-flag {
-  position: absolute;
-  left: calc(100% + 8px);
-  color: #9fd1ff;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .fortress-label {
   grid-column: 1 / 3;
   grid-row: 3;
@@ -627,8 +619,29 @@ span.chip-mode-value {
   cursor: default;
 }
 
+.unit-card.armed,
+.unit-card.next-paint {
+  z-index: 5;
+}
+
 .unit-card.armed {
-  box-shadow: inset 0 0 0 2px #fff;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
+.unit-card.armed.army-a-chip {
+  box-shadow: inset 0 0 0 3px #ff1744, 0 0 0 2px #ff5252;
+}
+
+.unit-card.armed.army-b-chip {
+  box-shadow: inset 0 0 0 3px #2979ff, 0 0 0 2px #82b1ff;
+}
+
+.unit-card.next-paint.army-a-chip {
+  box-shadow: inset 0 0 0 2px #ff8a80, 0 0 0 1px #ff5252;
+}
+
+.unit-card.next-paint.army-b-chip {
+  box-shadow: inset 0 0 0 2px #80d8ff, 0 0 0 1px #40c4ff;
 }
 
 .cell > .unit-card,

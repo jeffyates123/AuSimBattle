@@ -14,7 +14,6 @@ export class LoginComponent {
   protected username = '';
   protected password = '';
   protected displayName = localStorage.getItem('ausim.beta.displayName') ?? '';
-  protected consent = localStorage.getItem('ausim.beta.consent') === 'yes';
   protected loading = false;
   protected error = '';
 
@@ -31,17 +30,13 @@ export class LoginComponent {
       this.error = 'Enter your name before continuing.';
       return;
     }
-    if (!this.consent) {
-      this.error = 'You need to accept the beta data notice.';
-      return;
-    }
     this.loading = true;
     this.changeDetector.markForCheck();
     const result = await this.auth.login({
       username: this.username.trim(),
       password: this.password,
       displayName: this.displayName.trim(),
-      consent: this.consent,
+      consent: true,
     });
     this.loading = false;
     if (!result.ok) {
@@ -50,7 +45,6 @@ export class LoginComponent {
       return;
     }
     localStorage.setItem('ausim.beta.displayName', this.displayName.trim());
-    localStorage.setItem('ausim.beta.consent', 'yes');
     const user = this.auth.currentUser();
     await this.router.navigateByUrl(user?.isAdmin ? '/admin' : '/planner');
     this.changeDetector.markForCheck();

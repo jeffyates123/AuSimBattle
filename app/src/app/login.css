@@ -23,12 +23,6 @@ h1 {
   font-size: 1.4rem;
 }
 
-.notice {
-  margin: 0 0 16px;
-  color: #b8c6dd;
-  line-height: 1.45;
-}
-
 form {
   display: grid;
   gap: 12px;
@@ -47,17 +41,6 @@ input {
   background: #0f1724;
   border-radius: 6px;
   padding: 8px 10px;
-}
-
-.consent {
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 8px;
-  font-weight: 500;
-}
-
-.consent input {
-  margin-top: 2px;
 }
 
 button {

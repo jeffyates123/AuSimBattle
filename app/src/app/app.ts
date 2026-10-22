@@ -94,6 +94,7 @@ export class App {
   protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string; fresh: boolean } | null = null;
   protected valueAction: { unitId: number; mode: EditableChipMode; value: number; fresh?: boolean } | null = null;
   protected chipModeMenu: { unitId: number } | null = null;
+  protected coordinateClearMenu: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | null = null;
   protected readonly chipSettingModes = this.chipDisplayModes.filter(
     (mode) =>
       mode.value !== 'fedType' &&
@@ -169,6 +170,7 @@ export class App {
   private lastDropAt = 0;
   private armedClickAt = 0;
   private lastPaletteDragAt = 0;
+  private draggingUnitId: number | null = null;
   private activeBattleId: string | null = null;
   protected rows: MapCell[][] = [];
   protected ownByCoord = new Map<string, FederationUnit>();
@@ -195,6 +197,7 @@ export class App {
     for (const group of [orders.movementAttack, orders.pioneerOnly, orders.detachmentOrders, orders.swapDetachmentOrders]) {
       group.forEach((item) => this.orderCodes.add(item.code));
     }
+    this.orderCodes.add(0);
     orders.additionalOrders.troopTypeFilters.forEach((item) => this.additionalOrderCodes.add(item.code));
     orders.additionalOrders.strategicPointSequence.forEach((item) => this.additionalOrderCodes.add(item.code));
     const rounds = orders.alternativeConditions.roundStartRange;
@@ -340,6 +343,7 @@ export class App {
   }
 
   protected onUnitDragStart(event: DragEvent, unitId: number): void {
+    this.draggingUnitId = unitId;
     event.dataTransfer?.setData('text/plain', String(unitId));
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
@@ -347,6 +351,7 @@ export class App {
   }
 
   protected onUnitDragEnd(): void {
+    this.draggingUnitId = null;
     this.lastPaletteDragAt = performance.now();
   }
 
@@ -365,9 +370,7 @@ export class App {
     event.stopPropagation();
     if (kind === 'own' && event.detail >= 2) {
       this.closeUnitMenus();
-      if (this.setupEditingEnabled()) {
-        this.returnToPool(unitId);
-      }
+      this.returnToPool(unitId);
       return;
     }
     if (kind === 'own' && this.beginValueEdit(unitId, event.detail)) {
@@ -403,6 +406,35 @@ export class App {
     this.valueEntry = null;
     this.valueAction = null;
     this.chipModeMenu = null;
+    this.coordinateClearMenu = null;
+  }
+
+  protected onCoordinateModeContextMenu(
+    event: MouseEvent,
+    mode: (typeof this.chipDisplayModes)[number]['value'],
+  ): void {
+    if (mode !== 'xy' && !this.isDestinationMode(mode)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.closeUnitMenus();
+    this.coordinateClearMenu = mode;
+  }
+
+  protected clearCoordinateMenuValue(): void {
+    const mode = this.coordinateClearMenu;
+    this.coordinateClearMenu = null;
+    if (!mode) {
+      return;
+    }
+    const id = this.highlightedFederationId;
+    if (id === null || this.highlightedFederationKind !== 'own') {
+      this.statusMessage = `Select a federation before clearing ${this.coordinateLabel(mode)}.`;
+      return;
+    }
+    this.writeCoordinate(id, mode, null);
+    this.statusMessage = `Cleared ${this.coordinateLabel(mode)} on federation ${id}.`;
   }
 
   protected onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
@@ -412,6 +444,48 @@ export class App {
       return;
     }
     this.openChipModeMenu(unitId);
+  }
+
+  protected boardRemovalLabel(): string | null {
+    const unitId = this.chipModeMenu?.unitId;
+    if (!unitId || !this.placements.has(unitId)) {
+      return null;
+    }
+    return this.sitsOnStart(unitId)
+      ? 'Remove federation from board'
+      : 'Remove federation from current Destination x/y';
+  }
+
+  protected removeFederationFromMenu(): void {
+    const unitId = this.chipModeMenu?.unitId;
+    const onStart = unitId ? this.sitsOnStart(unitId) : true;
+    this.chipModeMenu = null;
+    if (!unitId || !this.placements.has(unitId)) {
+      return;
+    }
+    if (onStart) {
+      this.returnToPool(unitId);
+      return;
+    }
+    if (!this.isDestinationMode(this.chipDisplayMode)) {
+      return;
+    }
+    this.writeCoordinate(unitId, this.chipDisplayMode, null);
+    this.statusMessage = `Cleared ${this.coordinateLabel(this.chipDisplayMode)} on federation ${unitId}.`;
+  }
+
+  private sitsOnStart(unitId: number): boolean {
+    const unit = this.federationUnit(unitId, 'own');
+    const placed = this.placements.get(unitId);
+    if (!unit || !placed) {
+      return true;
+    }
+    const displayed = this.displayedOwnCoordinate(unit);
+    const start = this.orderCoordinate(unit, 'start') ?? placed;
+    if (!displayed) {
+      return true;
+    }
+    return displayed.x === start.x && displayed.y === start.y;
   }
 
   protected selectedModeValue(mode: (typeof this.chipDisplayModes)[number]['value']): string {
@@ -447,6 +521,12 @@ export class App {
       if ((mode === 'formation' || mode === 'altFormation') && this.columnFormationOnly(unit)) {
         return 'Co';
       }
+      if (mode === 'formation') {
+        return 'Co';
+      }
+      if (mode === 'order') {
+        return '0';
+      }
       return '';
     }
     switch (mode) {
@@ -455,11 +535,11 @@ export class App {
       case 'startAttack':
         return this.displayNumber(row.primary.startAttack);
       case 'order':
-        return this.displayNumber(row.primary.order);
+        return this.displayNumber(row.primary.order ?? 0);
       case 'additionalOrder':
         return this.displayNumber(row.primary.additionalOrder);
       case 'formation':
-        return this.shownFormation(unit, row.primary.formation);
+        return this.shownFormation(unit, row.primary.formation ?? 1);
       case 'destination1':
         return this.formatCoordinate(row.primary.destination1);
       case 'destination2':
@@ -564,7 +644,7 @@ export class App {
     return `Coordinate must be inside the setup area (x ${zone.minX}–${zone.maxX}, y ${zone.minY}–${zone.maxY}).`;
   }
 
-  private coordinateLabel(mode: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2'): string {
+  protected coordinateLabel(mode: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2'): string {
     return this.chipDisplayModes.find((item) => item.value === mode)?.label ?? mode;
   }
 
@@ -608,12 +688,34 @@ export class App {
 
   protected onCellDrop(event: DragEvent, x: number, y: number): void {
     event.preventDefault();
-    if (!this.setupEditingEnabled()) {
+    this.lastDropAt = performance.now();
+    const unitId = this.droppedUnitId(event);
+    if (!unitId) {
       return;
     }
-    this.lastDropAt = performance.now();
-    const unitId = Number(event.dataTransfer?.getData('text/plain') ?? '');
-    this.placeFederation(unitId, x, y);
+    const placed = this.placements.has(unitId);
+    if (this.isDestinationMode(this.chipDisplayMode)) {
+      if (this.setDestination(unitId, this.chipDisplayMode, x, y)) {
+        this.selectFederation(unitId, 'own');
+        this.armedFederationId = unitId;
+        this.statusMessage = `Set ${this.coordinateLabel(this.chipDisplayMode)} for federation ${unitId} to ${x}/${y}.`;
+      }
+      if (!placed && this.inSelectedSetup(x, y)) {
+        this.placeFederation(unitId, x, y);
+      }
+      return;
+    }
+    if (!placed || this.chipDisplayMode === 'xy') {
+      this.placeFederation(unitId, x, y);
+    }
+  }
+
+  private droppedUnitId(event: DragEvent): number {
+    const fromEvent = Number(event.dataTransfer?.getData('text/plain') ?? '');
+    if (fromEvent) {
+      return fromEvent;
+    }
+    return this.draggingUnitId ?? 0;
   }
 
   protected onCellClick(event: MouseEvent, x: number, y: number): void {
@@ -631,15 +733,15 @@ export class App {
       this.placeDestination(this.chipDisplayMode, x, y);
       return;
     }
-    if (!this.setupEditingEnabled()) {
-      return;
-    }
     const own = this.ownSetupUnitAt(x, y);
     if (event.detail >= 2 && own) {
       this.closeUnitMenus();
       if (performance.now() - this.armedClickAt > 500) {
         this.returnToPool(own.id);
       }
+      return;
+    }
+    if (!this.coordinateMoveEnabled() && !this.armedUnitNeedsPlacement()) {
       return;
     }
     if (this.highlightedFederationId === null) {
@@ -653,9 +755,6 @@ export class App {
   protected onCellContextMenu(event: MouseEvent, x: number, y: number): void {
     event.preventDefault();
     if (this.clearEntrenchmentAt(x, y)) {
-      return;
-    }
-    if (!this.setupEditingEnabled()) {
       return;
     }
     const own = this.ownSetupUnitAt(x, y);
@@ -724,9 +823,6 @@ export class App {
 
   protected onTrayDrop(event: DragEvent): void {
     event.preventDefault();
-    if (!this.setupEditingEnabled()) {
-      return;
-    }
     const unitId = Number(event.dataTransfer?.getData('text/plain') ?? '');
     this.returnToPool(unitId);
   }
@@ -1149,19 +1245,50 @@ export class App {
   }
 
   protected chipDragEnabled(unit: FederationUnit): boolean {
-    return this.setupEditingEnabled() && this.isOwnUnit(unit);
+    return this.coordinateMoveEnabled() && this.isOwnUnit(unit);
   }
 
-  private setupEditingEnabled(): boolean {
-    const source = this.positionSource();
-    return (
-      source === 'deployment' ||
-      source === 'start' ||
-      source === 'destination1' ||
-      source === 'destination2' ||
-      source === 'altDestination1' ||
-      source === 'altDestination2'
-    );
+  protected chipHighlight(unitId: number, kind: 'own' | 'enemy'): 'current' | 'next' | null {
+    if (unitId === this.highlightedFederationId && kind === this.highlightedFederationKind) {
+      return 'current';
+    }
+    if (kind === 'own' && unitId === this.nextHighlightedFederationId()) {
+      return 'next';
+    }
+    return null;
+  }
+
+  private nextHighlightedFederationId(): number | null {
+    const current = this.highlightedFederationKind === 'own' ? this.highlightedFederationId : null;
+    if (current === null) {
+      return null;
+    }
+    if (this.valuePaint) {
+      return this.nextEmptyForPaint(current);
+    }
+    if (this.isDestinationMode(this.chipDisplayMode)) {
+      return this.nextBattlefieldFederation(current)?.id ?? null;
+    }
+    if (this.armedFederationId !== null && this.armedFederationId !== current) {
+      return this.armedFederationId;
+    }
+    const unplaced = this.getUnplacedUnits();
+    const next = unplaced.find((unit) => unit.id > current) ?? unplaced[0];
+    return next && next.id !== current ? next.id : null;
+  }
+
+  private nextEmptyForPaint(afterId: number): number | null {
+    const mode = this.valuePaint?.mode;
+    const units = this.selectedArmy?.units;
+    if (!mode || !units?.length) {
+      return null;
+    }
+    const ordered = [...units.filter((unit) => unit.id > afterId), ...units.filter((unit) => unit.id < afterId)];
+    return ordered.find((unit) => this.fieldValue(unit.id, mode) === null)?.id ?? null;
+  }
+
+  private coordinateMoveEnabled(): boolean {
+    return this.chipDisplayMode === 'xy' || this.isDestinationMode(this.chipDisplayMode);
   }
 
   private armedUnitNeedsPlacement(): boolean {
@@ -1242,29 +1369,21 @@ export class App {
     return stored.get(numericId) ?? stored.get(String(numericId));
   }
 
-  private overlayCoordinate(unit: FederationUnit): Coordinate | null {
-    const source = this.positionSource();
-    if (source === 'deployment' || source === 'start') {
-      return null;
-    }
-    return this.orderCoordinate(unit, source);
-  }
-
   private displayedOwnCoordinate(unit: FederationUnit): Coordinate | null {
     const override = this.chipPositionOverride.get(unit.id);
     if (override) {
       return override;
     }
-    const placed = this.placements.get(unit.id);
-    if (!placed) {
-      return null;
-    }
     const source = this.positionSource();
     if (source !== 'deployment' && source !== 'start') {
-      const destination = this.overlayCoordinate(unit);
+      const destination = this.orderCoordinate(unit, source);
       if (destination) {
         return destination;
       }
+    }
+    const placed = this.placements.get(unit.id);
+    if (!placed) {
+      return null;
     }
     return this.orderCoordinate(unit, 'start') ?? placed;
   }
@@ -1528,6 +1647,12 @@ export class App {
     }
     const orderRow = this.orderRowFor(unit.id);
     if (!orderRow) {
+      if (this.chipLabelMode === 'order') {
+        return '0';
+      }
+      if (this.chipLabelMode === 'formation') {
+        return 'Co';
+      }
       return '';
     }
     switch (this.chipLabelMode) {
@@ -1536,11 +1661,11 @@ export class App {
       case 'startAttack':
         return this.displayNumber(orderRow.primary.startAttack);
       case 'order':
-        return this.displayNumber(orderRow.primary.order);
+        return this.displayNumber(orderRow.primary.order ?? 0);
       case 'additionalOrder':
         return this.displayNumber(orderRow.primary.additionalOrder);
       case 'formation':
-        return this.shownFormation(unit, orderRow.primary.formation);
+        return this.shownFormation(unit, orderRow.primary.formation ?? 1);
       case 'altCondition':
         return this.displayNumber(orderRow.alternative.condition);
       case 'altOrder':
@@ -1864,9 +1989,9 @@ export class App {
       start: { ...blank },
       primary: {
         startAttack: null,
-        order: null,
+        order: 0,
         additionalOrder: null,
-        formation: null,
+        formation: 1,
         destination1: { ...blank },
         destination2: { ...blank },
       },
@@ -2233,14 +2358,35 @@ export class App {
     if (
       unitId === null ||
       this.highlightedFederationKind !== 'own' ||
-      !this.selectedArmy?.units.some((unit) => unit.id === unitId)
+      !this.setDestination(unitId, mode, x, y)
     ) {
-      this.statusMessage = `Select a federation, then click the battlefield to set ${label}.`;
+      if (unitId === null || this.highlightedFederationKind !== 'own') {
+        this.statusMessage = `Select a federation, then click the battlefield to set ${label}.`;
+      }
       return;
+    }
+    const next = this.nextBattlefieldFederation(unitId);
+    if (next) {
+      this.selectFederation(next.id, 'own');
+      this.statusMessage = `Set ${label} for federation ${unitId} to ${x}/${y}. Federation ${next.id} is next.`;
+    } else {
+      this.highlightedFederationId = null;
+      this.statusMessage = `Set ${label} for federation ${unitId} to ${x}/${y}.`;
+    }
+  }
+
+  private setDestination(
+    unitId: number,
+    mode: 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2',
+    x: number,
+    y: number,
+  ): boolean {
+    if (!this.selectedArmy?.units.some((unit) => unit.id === unitId)) {
+      return false;
     }
     if (!this.onMap(x, y)) {
       this.statusMessage = 'Coordinate must be on the battlefield.';
-      return;
+      return false;
     }
     const orderRow = this.ensureOrderRow(unitId);
     if (mode === 'destination1') {
@@ -2252,16 +2398,10 @@ export class App {
     } else {
       orderRow.alternative.destination2 = { x, y };
     }
+    this.chipPositionOverride.delete(unitId);
     this.layoutRevision += 1;
-    const next = this.nextBattlefieldFederation(unitId);
-    if (next) {
-      this.selectFederation(next.id, 'own');
-      this.statusMessage = `Set ${label} for federation ${unitId} to ${x}/${y}. Federation ${next.id} is next.`;
-    } else {
-      this.highlightedFederationId = null;
-      this.statusMessage = `Set ${label} for federation ${unitId} to ${x}/${y}.`;
-    }
     this.autoSaveDraft();
+    return true;
   }
 
   private nextBattlefieldFederation(afterId: number): FederationUnit | undefined {
@@ -2608,9 +2748,9 @@ export class App {
       },
       primary: {
         startAttack: this.coordValue(value.primary?.startAttack ?? null),
-        order: this.coordValue(value.primary?.order ?? null),
+        order: this.coordValue(value.primary?.order ?? null) ?? 0,
         additionalOrder: this.coordValue(value.primary?.additionalOrder ?? null),
-        formation: this.coordValue(value.primary?.formation ?? null),
+        formation: this.coordValue(value.primary?.formation ?? null) ?? 1,
         destination1: {
           x: this.coordValue(value.primary?.destination1?.x ?? null),
           y: this.coordValue(value.primary?.destination1?.y ?? null),

@@ -489,8 +489,9 @@ span.chip-mode-value {
 .axis {
   width: var(--cell-w);
   height: var(--cell-h);
-  color: #9eb0c8;
-  font-size: 8px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
   display: grid;
   place-items: center;
 }

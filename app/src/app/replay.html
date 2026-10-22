@@ -1,0 +1,135 @@
+<main class="app-shell" [style.--cols]="45">
+  <input #turnFile id="turnFile" type="file" accept=".txt" (change)="onTurnFileSelected($event)" hidden />
+
+  @if (fileKindChoice) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="dialog" aria-label="Choose what to load">
+        <p>This file has both a new Sim Battle field and Sim Battle results which do you want to load?</p>
+        <button type="button" class="sim-choice" (click)="chooseBattleField()">Sim Battle field</button>
+        <button type="button" class="sim-choice" (click)="chooseBattleResults()">Sim Battle results</button>
+        <button type="button" (click)="cancelFileKindChoice()">Cancel</button>
+      </div>
+    </div>
+  }
+
+  @if (message) {
+    <p class="error">{{ message }}</p>
+  }
+  @if (!battle) {
+    <div class="load-row">
+      <button type="button" title="Choose a file with a sim setup or a sim result." (click)="turnFile.click()">Load New Turn</button>
+      @if (loading) {
+        <span class="muted">Parsing...</span>
+      }
+    </div>
+  }
+
+  @if (battleChoices.length > 1) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="dialog" aria-label="Choose a battle">
+        <p>This file contains more than one battle. Choose which one to replay.</p>
+        @for (battle of battleChoices; track battle.battleNo) {
+          <button type="button" class="sim-choice" (click)="chooseBattle(battle.battleNo)">
+            Simulated battle No. {{ battle.battleNo }}
+            @if (battle.armyA) {
+              — {{ battle.armyA }}{{ battle.armyB ? ' vs ' + battle.armyB : '' }}
+            }
+          </button>
+        }
+        <button type="button" (click)="battleChoices = []">Cancel</button>
+      </div>
+    </div>
+  }
+
+  @if (battle) {
+    <section class="map panel">
+      <div class="map-heading">
+        <h2>
+          Replay Simulated battle No. {{ battle.battleNo }}
+          @if (battle.armyA) {
+            — {{ battle.armyA }}{{ battle.armyB ? ' vs ' + battle.armyB : '' }}
+          }
+        </h2>
+        <div class="replay-modes" role="radiogroup" aria-label="Federation chip display">
+          <button type="button" role="radio" [attr.aria-checked]="chipMode === 'fedNo'" [class.active]="chipMode === 'fedNo'" (click)="chipMode = 'fedNo'">No</button>
+          <button type="button" role="radio" [attr.aria-checked]="chipMode === 'fedType'" [class.active]="chipMode === 'fedType'" (click)="chipMode = 'fedType'">Ty</button>
+          <button type="button" role="radio" [attr.aria-checked]="chipMode === 'effectiveness'" [class.active]="chipMode === 'effectiveness'" (click)="chipMode = 'effectiveness'">EF</button>
+          <button type="button" role="radio" [attr.aria-checked]="chipMode === 'order'" [class.active]="chipMode === 'order'" (click)="chipMode = 'order'">Ord</button>
+          <button type="button" role="radio" [attr.aria-checked]="chipMode === 'formation'" [class.active]="chipMode === 'formation'" (click)="chipMode = 'formation'">Form</button>
+          <button type="button" role="radio" [attr.aria-checked]="chipMode === 'troopSpec'" [class.active]="chipMode === 'troopSpec'" (click)="chipMode = 'troopSpec'">TS</button>
+        </div>
+      </div>
+      <div class="replay-transport">
+        <button type="button" (click)="step(-1)" [disabled]="frameIndex === 0">Previous</button>
+        <button type="button" (click)="togglePlay()">{{ playing ? 'Pause' : 'Play' }}</button>
+        <button type="button" (click)="step(1)" [disabled]="frameIndex >= frames.length - 1">Next</button>
+        <input
+          type="range"
+          [min]="0"
+          [max]="frames.length - 1"
+          [value]="frameIndex"
+          aria-label="Battle round"
+          (input)="setFrame(rangeValue($event))"
+        />
+        <span>{{ frameLabel() }}</span>
+        @if (moraleLabel()) {
+          <span>{{ moraleLabel() }}</span>
+        }
+        @if (battle.winner) {
+          <span>Winner: {{ battle.winner }}</span>
+        }
+        <button type="button" class="load-turn" title="Choose a file with a sim setup or a sim result." (click)="turnFile.click()">Load New Turn</button>
+        @if (loading) {
+          <span class="muted">Parsing...</span>
+        }
+      </div>
+      <div
+        class="map-grid"
+        [style.grid-template-columns]="'var(--axis-w) repeat(45, var(--cell-w))'"
+      >
+        <div class="axis corner"></div>
+        @for (column of columns; track column) {
+          <div class="axis">{{ column }}</div>
+        }
+        @for (row of rows; track row[0].y) {
+          <div class="axis row-axis">{{ row[0].y }}</div>
+          @for (cell of row; track cell.x) {
+            <div
+              class="cell"
+              [style.background-color]="heightColor(cell.height)"
+              [style.box-shadow]="cellShadow(cell)"
+              [class.zone-n]="onZoneEdge(cell, 'n')"
+              [class.zone-s]="onZoneEdge(cell, 's')"
+              [class.zone-w]="onZoneEdge(cell, 'w')"
+              [class.zone-e]="onZoneEdge(cell, 'e')"
+              [class.strategic]="onStrategicPoint(cell.x, cell.y)"
+            >
+              @if (unitsAt(cell.x, cell.y); as occupants) {
+                @if (occupants.length) {
+                  <div class="cell-chips" [class.stacked]="occupants.length > 1">
+                    @for (unit of occupants; track unit.side + '-' + unit.id) {
+                      <div
+                        class="unit-card fixed"
+                        [class.army-a-chip]="unit.side === 'A'"
+                        [class.army-b-chip]="unit.side === 'B'"
+                        [class.troop-infantry]="family(unit) === 'infantry'"
+                        [class.troop-cavalry]="family(unit) === 'cavalry'"
+                        [class.troop-artillery]="family(unit) === 'artillery'"
+                        draggable="false"
+                        [title]="'Federation ' + unit.id"
+                      >
+                        <span class="chip-text" [class.wide]="chipText(unit).length > 3">{{ chipText(unit) }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <span class="glyph" [class.terrain]="cellLabel(cell).length > 1" [class.light]="glyphIsLight(cell.height)">{{ cellLabel(cell) }}</span>
+                }
+              }
+            </div>
+          }
+        }
+      </div>
+    </section>
+  }
+</main>

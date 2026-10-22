@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BattleHeader, FederationOrder } from './models/battle';
+import { ReplayLaunch } from './models/replay';
 import {
   ArmyData,
   ArmySide,
@@ -17,6 +18,8 @@ import { AuthService } from './services/auth.service';
 import { BetaDataService } from './services/beta-data.service';
 import { ExcelExportService, SimSheetSetup } from './services/excel-export.service';
 import { RulesService } from './services/rules.service';
+import { ReplayHandoffService } from './services/replay-handoff.service';
+import { ReplayParserService } from './services/replay-parser.service';
 import { TurnParserService } from './services/turn-parser.service';
 
 type ChipLabelMode =
@@ -27,12 +30,13 @@ type ChipLabelMode =
   | 'order'
   | 'additionalOrder'
   | 'formation'
+  | 'troopSpec'
   | 'altCondition'
   | 'altOrder'
   | 'altAdditionalOrder'
   | 'altFormation';
 
-type EditableChipMode = Exclude<ChipLabelMode, 'fedType' | 'fedNo'>;
+type EditableChipMode = Exclude<ChipLabelMode, 'fedType' | 'fedNo' | 'troopSpec'>;
 
 @Component({
   imports: [CommonModule, FormsModule],
@@ -50,6 +54,7 @@ export class App {
     { value: 'order', label: 'Order', short: 'Ord', row: 1 },
     { value: 'additionalOrder', label: 'Additional Order', short: 'Add', row: 1 },
     { value: 'formation', label: 'Formation', short: 'Form', row: 1 },
+    { value: 'troopSpec', label: 'Troop spec', short: 'TS', row: 1 },
     { value: 'destination1', label: 'Destination 1', short: 'D1', row: 1 },
     { value: 'destination2', label: 'Destination 2', short: 'D2', row: 1 },
     { value: 'altCondition', label: 'Alternative Condition', short: 'ACond', row: 2 },
@@ -66,6 +71,10 @@ export class App {
   protected readonly mapWidth = 45;
   protected readonly mapHeight = 40;
   protected parsedTurn: ParsedTurn | null = null;
+  protected fileKindChoice = false;
+  private loadedTurnText: string | null = null;
+  private pendingTurnText: string | null = null;
+  private pendingTurnName = '';
   protected selectedArmySide: ArmySide | null = null;
   protected selectedArmy: ArmyData | null = null;
   protected enemyArmy: ArmyData | null = null;
@@ -91,6 +100,7 @@ export class App {
       mode.value !== 'fedNo' &&
       mode.value !== 'battalionGroup' &&
       mode.value !== 'xy' &&
+      mode.value !== 'troopSpec' &&
       mode.value !== 'destination1' &&
       mode.value !== 'destination2' &&
       mode.value !== 'altDestination1' &&
@@ -174,6 +184,8 @@ export class App {
     private readonly rules: RulesService,
     private readonly router: Router,
     private readonly changeDetector: ChangeDetectorRef,
+    private readonly replayHandoff: ReplayHandoffService,
+    private readonly replayParser: ReplayParserService,
   ) {
     const orders = this.rules.getSimBattleStore().orders;
     orders.formationOrders.forEach((item) => {
@@ -191,66 +203,83 @@ export class App {
     }
     orders.alternativeConditions.headcountDropBelowCodes.forEach((item) => this.conditionCodes.add(item.code));
     orders.alternativeConditions.other.forEach((item) => this.conditionCodes.add(item.code));
+    const freshSetup = this.replayHandoff.freshSetup;
+    this.replayHandoff.freshSetup = null;
+    if (freshSetup) {
+      void this.loadSetupFile(freshSetup.text, freshSetup.fileName);
+    } else if (this.replayHandoff.turnText) {
+      try {
+        this.parseTurnText(this.replayHandoff.turnText);
+      } catch {
+        this.parseError = 'The setup turn could not be restored.';
+      }
+    }
   }
 
   protected async onTurnFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
+    input.value = '';
     if (!file) {
       return;
     }
 
-    const generation = ++this.turnLoadGeneration;
     this.loading = true;
     this.parseError = '';
     this.exportError = '';
     this.statusMessage = '';
     this.betaStoreWarning = '';
-    this.turnLoadChoice = null;
-    this.chipIndexKey = '';
-    this.chipsByCell.clear();
     this.changeDetector.markForCheck();
 
     try {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
-      if (generation !== this.turnLoadGeneration) {
-        return;
-      }
       const text = await file.text();
-      if (generation !== this.turnLoadGeneration) {
+      const kinds = this.turnFileKinds(text);
+      if (kinds.setup && kinds.results) {
+        this.pendingTurnText = text;
+        this.pendingTurnName = file.name;
+        this.fileKindChoice = true;
         return;
       }
-      let parseError: string | null = null;
-      let gameId: string | null = null;
-      let simulationNumber: number | null = null;
-      let army: ArmySide | null = null;
-      try {
-        this.parseTurnText(text);
-        gameId = this.header?.gameId ?? null;
-        simulationNumber = this.header?.simulationNumber ?? null;
-        army = this.selectedArmySide;
-        await this.offerMatchingSim(generation);
-      } catch (error) {
-        parseError = error instanceof Error ? error.message : 'Unable to parse this turn file.';
-        this.parseError = parseError;
-        this.parsedTurn = null;
-        this.rows = [];
+      if (kinds.results) {
+        await this.openResultsReplay(text, null);
+        return;
       }
-      await this.storeTurnForBeta(file.name, text, parseError, gameId, simulationNumber, army);
+      if (!kinds.setup) {
+        this.parseError = 'That file has neither a sim setup nor a sim result.';
+        return;
+      }
+      await this.loadSetupFile(text, file.name);
     } catch (error) {
-      if (generation !== this.turnLoadGeneration) {
-        return;
-      }
       this.parseError = error instanceof Error ? error.message : 'Unable to parse this turn file.';
       this.parsedTurn = null;
       this.rows = [];
     } finally {
-      if (generation === this.turnLoadGeneration) {
-        this.loading = false;
-        input.value = '';
-        this.changeDetector.markForCheck();
-      }
+      this.loading = false;
+      this.changeDetector.markForCheck();
     }
+  }
+
+  protected chooseBattleField(): void {
+    const text = this.pendingTurnText;
+    const fileName = this.pendingTurnName;
+    this.clearFileKindChoice();
+    if (!text) {
+      return;
+    }
+    void this.loadSetupFile(text, fileName);
+  }
+
+  protected chooseBattleResults(): void {
+    const text = this.pendingTurnText;
+    this.clearFileKindChoice();
+    if (!text) {
+      return;
+    }
+    void this.openResultsReplay(text, text);
+  }
+
+  protected cancelFileKindChoice(): void {
+    this.clearFileKindChoice();
   }
 
   protected onArmySelected(army: BattleHeader['army'] | string | null): void {
@@ -400,6 +429,9 @@ export class App {
     if (mode === 'fedNo') {
       return this.fedNoLabel(unit.id);
     }
+    if (mode === 'troopSpec') {
+      return this.troopSpecLabel(unit);
+    }
     if (this.highlightedFederationKind !== 'own') {
       return mode === 'xy' && unit.start ? `${unit.start.x}/${unit.start.y}` : '';
     }
@@ -412,6 +444,9 @@ export class App {
       return placed ? `${placed.x}/${placed.y}` : '';
     }
     if (!row) {
+      if ((mode === 'formation' || mode === 'altFormation') && this.columnFormationOnly(unit)) {
+        return 'Co';
+      }
       return '';
     }
     switch (mode) {
@@ -424,7 +459,7 @@ export class App {
       case 'additionalOrder':
         return this.displayNumber(row.primary.additionalOrder);
       case 'formation':
-        return this.displayFormation(row.primary.formation);
+        return this.shownFormation(unit, row.primary.formation);
       case 'destination1':
         return this.formatCoordinate(row.primary.destination1);
       case 'destination2':
@@ -436,7 +471,7 @@ export class App {
       case 'altAdditionalOrder':
         return this.displayNumber(row.alternative.additionalOrder);
       case 'altFormation':
-        return this.displayFormation(row.alternative.formation);
+        return this.shownFormation(unit, row.alternative.formation);
       case 'altDestination1':
         return this.formatCoordinate(row.alternative.destination1);
       case 'altDestination2':
@@ -447,13 +482,13 @@ export class App {
   }
 
   protected selectedModeEditable(mode: (typeof this.chipDisplayModes)[number]['value']): boolean {
-    return this.highlightedFederationKind === 'own' && this.highlightedFederationId !== null && mode !== 'fedType' && mode !== 'fedNo';
+    return this.highlightedFederationKind === 'own' && this.highlightedFederationId !== null && mode !== 'fedType' && mode !== 'fedNo' && mode !== 'troopSpec';
   }
 
   protected commitSelectedModeValue(mode: (typeof this.chipDisplayModes)[number]['value'], event: Event): void {
     const input = event.target as HTMLInputElement;
     const id = this.highlightedFederationId;
-    if (id === null || this.highlightedFederationKind !== 'own' || mode === 'fedType' || mode === 'fedNo') {
+    if (id === null || this.highlightedFederationKind !== 'own' || mode === 'fedType' || mode === 'fedNo' || mode === 'troopSpec') {
       input.value = this.selectedModeValue(mode);
       return;
     }
@@ -737,6 +772,119 @@ export class App {
 
   protected async goToAdmin(): Promise<void> {
     await this.router.navigateByUrl('/admin');
+  }
+
+  private clearFileKindChoice(): void {
+    this.fileKindChoice = false;
+    this.pendingTurnText = null;
+    this.pendingTurnName = '';
+  }
+
+  private turnFileKinds(text: string): { setup: boolean; results: boolean } {
+    return {
+      setup: /The Battle field/i.test(text),
+      results: /Simulated battle No\.\s*\d+\s+Initial Deployment/i.test(text),
+    };
+  }
+
+  private async loadSetupFile(text: string, fileName: string): Promise<void> {
+    const generation = ++this.turnLoadGeneration;
+    this.loading = true;
+    this.parseError = '';
+    this.exportError = '';
+    this.statusMessage = '';
+    this.betaStoreWarning = '';
+    this.turnLoadChoice = null;
+    this.chipIndexKey = '';
+    this.chipsByCell.clear();
+    this.changeDetector.markForCheck();
+
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (generation !== this.turnLoadGeneration) {
+        return;
+      }
+      let parseError: string | null = null;
+      let gameId: string | null = null;
+      let simulationNumber: number | null = null;
+      let army: ArmySide | null = null;
+      try {
+        this.parseTurnText(text);
+        gameId = this.header?.gameId ?? null;
+        simulationNumber = this.header?.simulationNumber ?? null;
+        army = this.selectedArmySide;
+        await this.offerMatchingSim(generation);
+      } catch (error) {
+        parseError = error instanceof Error ? error.message : 'Unable to parse this turn file.';
+        this.parseError = parseError;
+        this.parsedTurn = null;
+        this.rows = [];
+      }
+      await this.storeTurnForBeta(fileName, text, parseError, gameId, simulationNumber, army);
+    } catch (error) {
+      if (generation !== this.turnLoadGeneration) {
+        return;
+      }
+      this.parseError = error instanceof Error ? error.message : 'Unable to parse this turn file.';
+      this.parsedTurn = null;
+      this.rows = [];
+    } finally {
+      if (generation === this.turnLoadGeneration) {
+        this.loading = false;
+        this.changeDetector.markForCheck();
+      }
+    }
+  }
+
+  private async openResultsReplay(text: string, setupText: string | null): Promise<void> {
+    let battles;
+    try {
+      battles = this.replayParser.parse(text);
+    } catch {
+      this.parseError = 'That results file could not be read.';
+      this.changeDetector.markForCheck();
+      return;
+    }
+    if (!battles.length) {
+      this.parseError = 'No simulated battle was found in that file.';
+      this.changeDetector.markForCheck();
+      return;
+    }
+
+    this.replayHandoff.resultsText = text;
+    const setup = setupText ? this.readSetupLaunch(setupText) : null;
+    if (setup) {
+      this.replayHandoff.turnText = setupText;
+      this.replayHandoff.launch = setup;
+    } else {
+      this.replayHandoff.turnText = this.loadedTurnText;
+      this.replayHandoff.launch = {
+        mode: 'different',
+        simNumber: null,
+        label: null,
+        mapCells: null,
+        strategicPoints: [],
+      };
+    }
+    await this.router.navigate(['/replay']);
+  }
+
+  private readSetupLaunch(text: string): ReplayLaunch | null {
+    try {
+      const turn = this.parser.parse(text);
+      const brief = turn.battleBrief;
+      return {
+        mode: 'this',
+        simNumber: turn.simNumber,
+        label: `${turn.header.state ?? 'Sim'} ${turn.simNumber}`,
+        mapCells: turn.mapCells.map((cell) => ({ ...cell })),
+        strategicPoints: [...brief.deploymentAreaA.strategicPoints, ...brief.deploymentAreaB.strategicPoints].map((point) => ({
+          ...point,
+        })),
+      };
+    } catch {
+      return null;
+    }
   }
 
   protected async signOut(): Promise<void> {
@@ -1287,6 +1435,9 @@ export class App {
     if (mode === 'fedType' || mode === 'fedNo') {
       return (this.selectedArmy?.units.length ?? 0) > 0;
     }
+    if (mode === 'troopSpec') {
+      return [...(this.selectedArmy?.units ?? []), ...(this.enemyArmy?.units ?? [])].some((unit) => this.troopSpecLabel(unit) !== '');
+    }
     for (const orderRow of this.federationOrders.values()) {
       if (this.orderFieldHasValue(orderRow, mode)) {
         return true;
@@ -1363,11 +1514,17 @@ export class App {
   }
 
   protected chipText(unit: FederationUnit): string {
+    if (this.chipLabelMode === 'troopSpec') {
+      return this.troopSpecLabel(unit);
+    }
     if (!this.isOwnUnit(unit) || this.chipLabelMode === 'fedType') {
       return this.fedTypeLabel(unit);
     }
     if (this.chipLabelMode === 'fedNo') {
       return this.fedNoLabel(unit.id);
+    }
+    if ((this.chipLabelMode === 'formation' || this.chipLabelMode === 'altFormation') && this.columnFormationOnly(unit)) {
+      return 'Co';
     }
     const orderRow = this.orderRowFor(unit.id);
     if (!orderRow) {
@@ -1383,7 +1540,7 @@ export class App {
       case 'additionalOrder':
         return this.displayNumber(orderRow.primary.additionalOrder);
       case 'formation':
-        return this.displayFormation(orderRow.primary.formation);
+        return this.shownFormation(unit, orderRow.primary.formation);
       case 'altCondition':
         return this.displayNumber(orderRow.alternative.condition);
       case 'altOrder':
@@ -1391,7 +1548,7 @@ export class App {
       case 'altAdditionalOrder':
         return this.displayNumber(orderRow.alternative.additionalOrder);
       case 'altFormation':
-        return this.displayFormation(orderRow.alternative.formation);
+        return this.shownFormation(unit, orderRow.alternative.formation);
     }
   }
 
@@ -2413,6 +2570,26 @@ export class App {
     return this.formationByCode.get(value) ?? String(value);
   }
 
+  private shownFormation(unit: FederationUnit, value: number | null): string {
+    if (this.columnFormationOnly(unit)) {
+      return 'Co';
+    }
+    return this.displayFormation(value);
+  }
+
+  private columnFormationOnly(unit: FederationUnit): boolean {
+    if (unit.troopCode.trim().toLowerCase() === 'pi') {
+      return true;
+    }
+    const armyName = this.isOwnUnit(unit) ? this.selectedArmy?.name : this.enemyArmy?.name;
+    return this.troopFamily(unit, armyName) === 'artillery';
+  }
+
+  private troopSpecLabel(unit: FederationUnit): string {
+    const armyName = this.isOwnUnit(unit) ? this.selectedArmy?.name : this.enemyArmy?.name;
+    return this.rules.getBattalionRuleByShortName(armyName, unit.troopCode)?.troopSpecs.join(' ') ?? '';
+  }
+
   private federationOrdersRecord(): Record<number, FederationOrder> {
     const result: Record<number, FederationOrder> = {};
     this.federationOrders.forEach((orderRow, id) => {
@@ -2462,6 +2639,7 @@ export class App {
 
   private parseTurnText(text: string): void {
     this.parsedTurn = this.parser.parse(text);
+    this.loadedTurnText = text;
     this.header = { ...this.parsedTurn.header };
     if (!this.header.processDate) {
       this.header.processDate = new Date().toISOString().slice(0, 10);

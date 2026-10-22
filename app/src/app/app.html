@@ -113,6 +113,16 @@
       </div>
     </div>
   }
+  @if (fileKindChoice) {
+    <div class="warning-backdrop">
+      <div class="warning-dialog" role="dialog" aria-label="Choose what to load">
+        <p>This file has both a new Sim Battle field and Sim Battle results which do you want to load?</p>
+        <button type="button" class="sim-choice" (click)="chooseBattleField()">Sim Battle field</button>
+        <button type="button" class="sim-choice" (click)="chooseBattleResults()">Sim Battle results</button>
+        <button type="button" (click)="cancelFileKindChoice()">Cancel</button>
+      </div>
+    </div>
+  }
   @if (clearAllPrompt) {
     <div class="warning-backdrop">
       <div class="warning-dialog" role="alertdialog" aria-label="Clear all federations">
@@ -130,7 +140,7 @@
   @if (!(parsedTurn && header)) {
     <div class="load-row">
       <h1 class="app-title">Austerlitz Simulated Battle Planner</h1>
-      <button type="button" (click)="turnFile.click()">Load New Turn</button>
+      <button type="button" title="Choose a file with a sim setup or a sim result." (click)="turnFile.click()">Load New Turn</button>
       @if (loading) {
         <span class="muted">Parsing...</span>
       }
@@ -156,7 +166,7 @@
         </label>
         <h1 class="app-title">Austerlitz Simulated Battle Planner</h1>
         <div class="bar-actions">
-          <button type="button" (click)="turnFile.click()">Load New Turn</button>
+          <button type="button" title="Choose a file with a sim setup or a sim result." (click)="turnFile.click()">Load New Turn</button>
           @if (selectedArmy && parsedTurn.armies.length) {
             <button type="button" class="paired-action" [disabled]="!canExport() || exporting" (click)="downloadSimSheet()">
               {{ exporting ? 'Saving...' : 'Save SIM' }}
@@ -342,7 +352,7 @@
                 [title]="mode.value === 'fedType' && showFedEffectiveness ? 'Fed type and EF' : mode.label"
                 (click)="selectChipMode(mode.value)"
               >{{ mode.short }}</button>
-              @if (mode.value === 'fedType' || mode.value === 'fedNo') {
+              @if (mode.value === 'fedType' || mode.value === 'fedNo' || mode.value === 'troopSpec') {
                 <span class="chip-mode-value">{{ selectedModeValue(mode.value) }}</span>
               } @else {
                 <input

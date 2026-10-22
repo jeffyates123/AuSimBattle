@@ -368,6 +368,7 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const labels = Array.from(compiled.querySelectorAll('button')).map((button) => button.textContent?.trim() ?? '');
     expect(labels).toContain('Load New Turn');
+    expect(labels).not.toContain('Replay Battle');
   });
 
   it('keeps a second turn load from scanning every federation on every cell', async () => {

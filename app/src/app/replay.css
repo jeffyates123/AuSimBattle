@@ -1,0 +1,44 @@
+app-replay {
+  --cell-w: 33px;
+  --cell-h: 22px;
+  --axis-w: 22px;
+  display: block;
+  min-height: 100vh;
+  background: #10131a;
+  color: #e8edf5;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.replay-transport {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 8px;
+}
+
+.replay-transport input[type='range'] {
+  width: min(520px, 40vw);
+  flex: 1 1 240px;
+  min-width: 160px;
+}
+
+.replay-transport .load-turn {
+  margin-left: auto;
+}
+
+.replay-modes {
+  display: flex;
+  gap: 6px;
+}
+
+.replay-modes button.active {
+  background: #c9a227;
+  color: #1b1404;
+}
+
+app-replay .glyph.terrain {
+  font-size: 10px;
+  letter-spacing: -0.4px;
+}

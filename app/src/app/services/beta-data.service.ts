@@ -45,6 +45,20 @@ export class BetaDataService {
     return { result: 'stored', id: body.id };
   }
 
+  async findSetupTurn(gameNo: string, letter: string, sim: number): Promise<string | null> {
+    const params = new URLSearchParams({ game: gameNo, letter, sim: String(sim) });
+    const response = await this.request(`/api/setup-terrain?${params}`, { method: 'GET' });
+    if (!response?.ok) {
+      return null;
+    }
+    try {
+      const body = (await response.json()) as { turnText?: string };
+      return body.turnText ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async attachSheet(battleId: string, fileName: string, buffer: ArrayBuffer): Promise<StoreResult> {
     const response = await this.request(`/api/battles/${encodeURIComponent(battleId)}/sheet`, {
       method: 'POST',

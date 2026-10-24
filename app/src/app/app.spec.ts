@@ -71,7 +71,7 @@ describe('App', () => {
       chipText(unit: { id: number }): string;
       selectedArmy: { units: Array<{ id: number; troopCode: string }> } | null;
       valueEntry: { draft: string; error: string } | null;
-      valueAction: { value: number } | null;
+      valueAction: { unitId: number; mode: string; value: number; fresh?: boolean } | null;
       statusMessage: string;
     };
     const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
@@ -105,6 +105,11 @@ describe('App', () => {
     app.valueEntry!.draft = '7';
     app.confirmValueEntry(new Event('submit'));
     expect(app.valueEntry?.error).toContain('not a valid order');
+
+    app.valueEntry!.draft = '11';
+    app.confirmValueEntry(new Event('submit'));
+    expect(app.valueEntry).toBeNull();
+    expect(app.valueAction).toEqual({ unitId: 2, mode: 'order', value: 11, fresh: false });
   });
 
   it('paints the next battalion group onto later federations', async () => {
@@ -384,14 +389,15 @@ describe('App', () => {
     expect(app.federationOrders.get(6)?.primary.formation).toBe(1);
     expect(app.cellChips(3, 18).some((chip) => chip.unit.id === 6)).toBe(true);
     app.selectChipMode('order');
-    expect(app.cellChips(3, 18).some((chip) => chip.unit.id === 6)).toBe(false);
+    expect(app.cellChips(3, 18).some((chip) => chip.unit.id === 6)).toBe(true);
+    expect(app.cellChips(zone.minX, zone.minY).some((chip) => chip.unit.id === 6)).toBe(false);
   });
 
   it('keeps a placed chip on its start coordinate until a destination is shown', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance as unknown as {
       onTurnFileSelected(event: Event): Promise<void>;
-      selectChipMode(mode: 'xy' | 'order' | 'destination1' | 'destination2'): void;
+      selectChipMode(mode: 'xy' | 'order' | 'fedType' | 'destination1' | 'destination2'): void;
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
       onCellClick(event: MouseEvent, x: number, y: number): void;
       cellChips(x: number, y: number): Array<{ unit: { id: number } }>;
@@ -419,10 +425,15 @@ describe('App', () => {
     app.selectChipMode('destination2');
     expect(app.cellChips(4, 22).some((chip) => chip.unit.id === 1)).toBe(true);
     expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(false);
+    app.selectChipMode('fedType');
+    expect(app.cellChips(4, 22).some((chip) => chip.unit.id === 1)).toBe(true);
     app.selectChipMode('order');
-    expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(true);
+    expect(app.cellChips(4, 22).some((chip) => chip.unit.id === 1)).toBe(true);
     app.selectChipMode('destination1');
+    expect(app.cellChips(4, 22).some((chip) => chip.unit.id === 1)).toBe(true);
+    app.selectChipMode('xy');
     expect(app.cellChips(x, y).some((chip) => chip.unit.id === 1)).toBe(true);
+    expect(app.cellChips(4, 22).some((chip) => chip.unit.id === 1)).toBe(false);
   });
 
   it('should render the load button before a turn is opened', async () => {

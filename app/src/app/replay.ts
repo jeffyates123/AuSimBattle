@@ -6,6 +6,8 @@ import { ReplayHandoffService } from './services/replay-handoff.service';
 import { ReplayParserService } from './services/replay-parser.service';
 import { RulesService } from './services/rules.service';
 import { TurnParserService } from './services/turn-parser.service';
+import { BetaDataService } from './services/beta-data.service';
+import { turnArchiveName, turnNationGame } from './services/turn-archive-name';
 
 type ChipMode = 'fedNo' | 'fedType' | 'effectiveness' | 'order' | 'formation' | 'troopSpec';
 type TroopFamily = 'infantry' | 'cavalry' | 'artillery';
@@ -42,12 +44,15 @@ export class ReplayComponent implements OnDestroy {
   private knownHeights = false;
   private pendingTurnText: string | null = null;
   private pendingTurnName = '';
+  private resultsIdentity: { gameNo: string; letter: string } | null = null;
+  private terrainLookup = 0;
 
   constructor(
     private readonly handoff: ReplayHandoffService,
     private readonly parser: ReplayParserService,
     private readonly rules: RulesService,
     private readonly turnParser: TurnParserService,
+    private readonly betaData: BetaDataService,
     private readonly router: Router,
     private readonly changeDetector: ChangeDetectorRef,
   ) {
@@ -137,6 +142,15 @@ export class ReplayComponent implements OnDestroy {
   }
 
   private showResults(text: string, setupText: string | null): void {
+    const storedName = turnArchiveName(text, 'Battle') ?? (this.pendingTurnName || 'battle.txt');
+    void this.betaData.createBattle({
+      fileName: storedName,
+      turnText: text,
+      gameId: null,
+      simulationNumber: null,
+      army: null,
+      parseError: null,
+    });
     this.stopPlay();
     this.battle = null;
     this.battleChoices = [];
@@ -189,6 +203,7 @@ export class ReplayComponent implements OnDestroy {
       this.message = 'No simulated battle was found in that file.';
       return;
     }
+    this.resultsIdentity = turnNationGame(text);
     if (!this.launch) {
       this.launch = {
         mode: 'different',
@@ -202,7 +217,7 @@ export class ReplayComponent implements OnDestroy {
     if (this.launch.mode === 'this') {
       const match = this.parsedBattles.find((battle) => battle.battleNo === this.launch?.simNumber);
       if (match) {
-        this.startBattle(match, true);
+        void this.applyBattle(match);
         return;
       }
     }
@@ -210,14 +225,42 @@ export class ReplayComponent implements OnDestroy {
       this.battleChoices = this.parsedBattles;
       return;
     }
-    this.startBattle(this.parsedBattles[0], false);
+    void this.applyBattle(this.parsedBattles[0]);
+  }
+
+  private async applyBattle(battle: ReplayBattle): Promise<void> {
+    const generation = ++this.terrainLookup;
+    const loadedSetup = this.launch?.simNumber === battle.battleNo && !!this.launch.mapCells?.length;
+    if (!loadedSetup) {
+      const setupText = await this.storedSetup(battle.battleNo);
+      if (generation !== this.terrainLookup) {
+        return;
+      }
+      const launch = setupText ? this.readSetupLaunch(setupText) : null;
+      if (launch?.simNumber === battle.battleNo) {
+        this.launch = launch;
+      }
+    }
+    if (generation !== this.terrainLookup) {
+      return;
+    }
+    const useSetup = this.launch?.simNumber === battle.battleNo && !!this.launch.mapCells?.length;
+    this.startBattle(battle, useSetup);
+  }
+
+  private async storedSetup(sim: number): Promise<string | null> {
+    const identity = this.resultsIdentity;
+    if (!identity) {
+      return null;
+    }
+    return this.betaData.findSetupTurn(identity.gameNo, identity.letter, sim);
   }
 
   protected chooseBattle(battleNo: number): void {
     const battle = this.parsedBattles.find((item) => item.battleNo === battleNo);
     this.battleChoices = [];
     if (battle) {
-      this.startBattle(battle, false);
+      void this.applyBattle(battle);
     }
   }
 

@@ -21,6 +21,7 @@ import { RulesService } from './services/rules.service';
 import { ReplayHandoffService } from './services/replay-handoff.service';
 import { ReplayParserService } from './services/replay-parser.service';
 import { TurnParserService } from './services/turn-parser.service';
+import { turnArchiveName } from './services/turn-archive-name';
 
 type ChipLabelMode =
   | 'fedType'
@@ -163,6 +164,8 @@ export class App {
   private sheetFedNo = new Map<number, number>();
   private layoutRevision = 0;
   private readonly chipPositionOverride = new Map<number, Coordinate>();
+  private viewCoordinate: 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' = 'start';
+  private readonly heldPosition = new Map<number, Coordinate>();
   private turnLoadGeneration = 0;
   private chipIndexKey = '';
   private readonly chipsByCell = new Map<string, Array<{ unit: FederationUnit; kind: 'own' | 'enemy' }>>();
@@ -244,7 +247,7 @@ export class App {
         return;
       }
       if (kinds.results) {
-        await this.openResultsReplay(text, null);
+        await this.openResultsReplay(text, null, file.name);
         return;
       }
       if (!kinds.setup) {
@@ -274,11 +277,12 @@ export class App {
 
   protected chooseBattleResults(): void {
     const text = this.pendingTurnText;
+    const fileName = this.pendingTurnName;
     this.clearFileKindChoice();
     if (!text) {
       return;
     }
-    void this.openResultsReplay(text, text);
+    void this.openResultsReplay(text, text, fileName);
   }
 
   protected cancelFileKindChoice(): void {
@@ -321,6 +325,7 @@ export class App {
     this.placements = new Map<number, Coordinate>();
     this.federationOrders = new Map<number, FederationOrder>();
     this.sheetFedNo = new Map<number, number>();
+    this.heldPosition.clear();
     this.highlightedFederationId = null;
     this.fortressEntrenchments = this.emptyFortressEntrenchments();
     this.awaitingEntrenchment = false;
@@ -674,6 +679,7 @@ export class App {
       }
     } else {
       this.chipPositionOverride.delete(unitId);
+      this.heldPosition.delete(unitId);
     }
     this.layoutRevision += 1;
     this.autoSaveDraft();
@@ -916,7 +922,8 @@ export class App {
         this.parsedTurn = null;
         this.rows = [];
       }
-      await this.storeTurnForBeta(fileName, text, parseError, gameId, simulationNumber, army);
+      const storedName = turnArchiveName(text, 'Setup') ?? fileName;
+      await this.storeTurnForBeta(storedName, text, parseError, gameId, simulationNumber, army);
     } catch (error) {
       if (generation !== this.turnLoadGeneration) {
         return;
@@ -932,7 +939,9 @@ export class App {
     }
   }
 
-  private async openResultsReplay(text: string, setupText: string | null): Promise<void> {
+  private async openResultsReplay(text: string, setupText: string | null, fileName = 'battle.txt'): Promise<void> {
+    const storedName = turnArchiveName(text, 'Battle') ?? fileName;
+    await this.storeTurnForBeta(storedName, text, null, null, null, null);
     let battles;
     try {
       battles = this.replayParser.parse(text);
@@ -1329,20 +1338,25 @@ export class App {
     orderRow.start = { x: coord.x, y: coord.y };
   }
 
-  private positionSource(): 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | 'deployment' {
-    switch (this.chipDisplayMode) {
-      case 'xy':
-        return 'start';
-      case 'destination1':
-        return 'destination1';
-      case 'destination2':
-        return 'destination2';
-      case 'altDestination1':
-        return 'altDestination1';
-      case 'altDestination2':
-        return 'altDestination2';
-      default:
-        return 'deployment';
+  private positionSource(): 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' {
+    return this.viewCoordinate;
+  }
+
+  private coordinateView(
+    mode: (typeof this.chipDisplayModes)[number]['value'],
+  ): 'start' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | null {
+    if (mode === 'xy') {
+      return 'start';
+    }
+    return this.isDestinationMode(mode) ? mode : null;
+  }
+
+  private rememberShownPositions(): void {
+    for (const unit of this.selectedArmy?.units ?? []) {
+      const coord = this.displayedOwnCoordinate(unit);
+      if (coord) {
+        this.heldPosition.set(unit.id, { x: coord.x, y: coord.y });
+      }
     }
   }
 
@@ -1374,12 +1388,18 @@ export class App {
     if (override) {
       return override;
     }
-    const source = this.positionSource();
-    if (source !== 'deployment' && source !== 'start') {
-      const destination = this.orderCoordinate(unit, source);
-      if (destination) {
-        return destination;
-      }
+    const viewed =
+      this.orderCoordinate(unit, this.viewCoordinate) ??
+      (this.viewCoordinate === 'start' ? (this.placements.get(unit.id) ?? null) : null);
+    if (viewed) {
+      return viewed;
+    }
+    const held = this.heldPosition.get(unit.id);
+    if (held) {
+      return held;
+    }
+    if (this.viewCoordinate === 'start') {
+      return null;
     }
     const placed = this.placements.get(unit.id);
     if (!placed) {
@@ -1611,6 +1631,12 @@ export class App {
       this.valueEntry = null;
       this.valueAction = null;
     }
+    const nextView = this.coordinateView(mode);
+    if (nextView && nextView !== this.viewCoordinate) {
+      this.rememberShownPositions();
+      this.viewCoordinate = nextView;
+      this.layoutRevision += 1;
+    }
     if (this.chipPositionOverride.size) {
       this.chipPositionOverride.clear();
       this.layoutRevision += 1;
@@ -1716,6 +1742,7 @@ export class App {
       return;
     }
     this.writeField(entry.unitId, entry.mode, parsed);
+    this.valueAction = { unitId: entry.unitId, mode: entry.mode, value: parsed, fresh: false };
     this.statusMessage = `Saved ${this.fieldLabel(entry.mode)} ${this.displayFieldValue(entry.mode, parsed)} on federation ${entry.unitId}.`;
   }
 
@@ -2253,6 +2280,7 @@ export class App {
     this.federationOrders.delete(unitId);
     this.sheetFedNo.delete(unitId);
     this.chipPositionOverride.delete(unitId);
+    this.heldPosition.delete(unitId);
   }
 
   private unitIdForSheetRow(sheetNo: number, battalionGroup: number | null): number | null {
@@ -2802,6 +2830,8 @@ export class App {
     this.chipsByCell.clear();
     this.chipDisplayMode = 'fedType';
     this.chipLabelMode = 'fedType';
+    this.viewCoordinate = 'start';
+    this.heldPosition.clear();
     this.showFedEffectiveness = false;
     this.valueEntry = null;
     this.valueAction = null;

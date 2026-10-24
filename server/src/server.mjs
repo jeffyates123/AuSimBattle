@@ -143,7 +143,11 @@ function requireAdmin(request, response, next) {
 }
 
 function battleDir(id) {
-  return path.join(dataRoot, id);
+  const name = String(id);
+  if (!/^[\w.-]+$/.test(name)) {
+    throw new Error('Invalid battle id.');
+  }
+  return path.join(dataRoot, name);
 }
 
 function battleFile(id, name) {
@@ -243,6 +247,22 @@ app.get('/api/me', (request, response) => {
   });
 });
 
+app.get('/api/setup-terrain', requireAuth, async (request, response) => {
+  const game = firstQuery(request.query.game);
+  const letter = firstQuery(request.query.letter).toUpperCase();
+  const sim = firstQuery(request.query.sim);
+  if (!/^[A-Z]{2}-\d+$/.test(game) || !/^[A-Z]$/.test(letter) || !/^\d+$/.test(sim)) {
+    jsonError(response, 400, 'Game, nation, and sim are required.');
+    return;
+  }
+  const setup = await findSetupTurn(game, letter, sim);
+  if (!setup) {
+    jsonError(response, 404, 'No setup turn stored for that nation, game, and sim.');
+    return;
+  }
+  response.json(setup);
+});
+
 app.post('/api/battles', requireAuth, async (request, response) => {
   const { fileName, turnText } = request.body ?? {};
   if (typeof fileName !== 'string' || !fileName.trim()) {
@@ -255,9 +275,23 @@ app.post('/api/battles', requireAuth, async (request, response) => {
   }
 
   const record = buildBattleRecord(request.body, request.session);
+  const folder = archiveFolderName(record.turnFileName);
+  if (folder) {
+    record.id = folder;
+    try {
+      const existing = await readBattleMeta(folder);
+      record.createdAt = existing.createdAt || record.createdAt;
+      record.sheetFileName = existing.sheetFileName ?? null;
+      record.sheetStoredAt = existing.sheetStoredAt ?? null;
+    } catch {
+      // First copy for this game and sim.
+    }
+  }
   const dir = battleDir(record.id);
+  const storedTurnFile = storedTurnFileName(record.turnFileName);
+  record.turnStoredFile = storedTurnFile;
   await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(path.join(dir, 'turn.txt'), turnText, 'utf8');
+  await fs.writeFile(path.join(dir, storedTurnFile), turnText, 'utf8');
   await writeBattleMeta(record.id, record);
   response.json({ id: record.id });
 });
@@ -286,8 +320,10 @@ app.post('/api/battles/:id/sheet', requireAuth, async (request, response) => {
     return;
   }
   const bytes = Buffer.from(sheetBase64, 'base64');
-  await fs.writeFile(battleFile(id, 'sheet.xlsx'), bytes);
-  meta.sheetFileName = fileName;
+  const storedSheetFile = storedSheetFileName(id, fileName);
+  await fs.writeFile(battleFile(id, storedSheetFile), bytes);
+  meta.sheetFileName = storedSheetFile;
+  meta.sheetStoredFile = storedSheetFile;
   meta.sheetStoredAt = new Date().toISOString();
   await writeBattleMeta(id, meta);
   response.json({ ok: true });
@@ -312,7 +348,7 @@ app.get('/api/admin/battles/:id/turn', requireAuth, requireAdmin, async (request
   const { id } = request.params;
   try {
     const meta = await readBattleMeta(id);
-    const turn = await fs.readFile(battleFile(id, 'turn.txt'));
+    const turn = await readStoredTurn(id, meta);
     response.setHeader('Content-Type', 'text/plain; charset=utf-8');
     response.setHeader('Content-Disposition', `attachment; filename="${safeName(meta.turnFileName ?? 'turn.txt')}"`);
     response.send(turn);
@@ -325,13 +361,13 @@ app.get('/api/admin/battles/:id/sheet', requireAuth, requireAdmin, async (reques
   const { id } = request.params;
   try {
     const meta = await readBattleMeta(id);
-    const sheet = await fs.readFile(battleFile(id, 'sheet.xlsx'));
-    if (!meta.sheetFileName) {
+    const sheet = await readStoredSheet(id, meta);
+    if (!meta.sheetFileName && !meta.sheetStoredFile) {
       jsonError(response, 404, 'Sheet not stored yet.');
       return;
     }
     response.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    response.setHeader('Content-Disposition', `attachment; filename="${safeName(meta.sheetFileName)}"`);
+    response.setHeader('Content-Disposition', `attachment; filename="${safeName(meta.sheetStoredFile ?? meta.sheetFileName)}"`);
     response.send(sheet);
   } catch {
     jsonError(response, 404, 'Sheet not found.');
@@ -358,6 +394,92 @@ app.use((error, _request, response, _next) => {
 
 function safeName(name) {
   return String(name).replace(/[^a-zA-Z0-9._-]+/g, '_');
+}
+
+function firstQuery(value) {
+  const picked = Array.isArray(value) ? value[0] : value;
+  return String(picked ?? '').trim();
+}
+
+async function findSetupTurn(game, letter, sim) {
+  const folder = new RegExp(`^${game}_${letter}_\\d{4}_Sim${sim}$`);
+  const ids = await listBattleIds();
+  let best = null;
+  for (const id of ids) {
+    if (!folder.test(id)) {
+      continue;
+    }
+    const fileName = `${id}_Setup.txt`;
+    try {
+      const stat = await fs.stat(battleFile(id, fileName));
+      if (!best || stat.mtimeMs > best.mtimeMs) {
+        best = { id, fileName, mtimeMs: stat.mtimeMs };
+      }
+    } catch (error) {
+      if (!error || error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+  if (!best) {
+    return null;
+  }
+  return {
+    fileName: best.fileName,
+    turnText: await fs.readFile(battleFile(best.id, best.fileName), 'utf8'),
+  };
+}
+
+function archiveFolderName(fileName) {
+  const match = String(fileName).match(/^([A-Z]{2}-\d+_[A-Z]_\d{4}_Sim\d+)_(?:Setup|Battle)\.txt$/);
+  return match ? match[1] : null;
+}
+
+function storedSheetFileName(id, requestedName) {
+  if (/^[A-Z]{2}-\d+_[A-Z]_\d{4}_Sim\d+$/.test(String(id))) {
+    return `${id}_Setup.xlsx`;
+  }
+  const safe = safeName(requestedName);
+  if (safe.toLowerCase().endsWith('.xlsx') && safe !== '.xlsx') {
+    return safe;
+  }
+  return 'sheet.xlsx';
+}
+
+async function readStoredSheet(id, meta) {
+  const named = meta.sheetStoredFile || meta.sheetFileName;
+  if (named) {
+    try {
+      return await fs.readFile(battleFile(id, storedSheetFileName(id, named)));
+    } catch (error) {
+      if (!error || error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+  return fs.readFile(battleFile(id, 'sheet.xlsx'));
+}
+
+function storedTurnFileName(name) {
+  const safe = safeName(name);
+  if (!safe.toLowerCase().endsWith('.txt') || safe === '.txt') {
+    return 'turn.txt';
+  }
+  return safe;
+}
+
+async function readStoredTurn(id, meta) {
+  const named = meta.turnStoredFile;
+  if (named) {
+    try {
+      return await fs.readFile(battleFile(id, storedTurnFileName(named)));
+    } catch (error) {
+      if (!error || error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+  return fs.readFile(battleFile(id, 'turn.txt'));
 }
 
 const port = Number(process.env.PORT ?? 8080);

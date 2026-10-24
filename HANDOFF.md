@@ -1,8 +1,8 @@
 # AuSimBattle handoff
 
-Angular app for setting up an Austerlitz play-by-email sim battle. The planner still runs in the browser, and there is now an optional beta server mode with login and stored test battles. A loaded `.txt` turn fills the sheet header, the federation tray, and the 45×40 battlefield. The same placements are stored in a browser draft and written into a SIM sheet workbook.
+Angular app for setting up an Austerlitz play-by-email sim battle, and for replaying a results turn. The planner runs in the browser. Beta server mode adds login and stores a copy of each loaded turn. A loaded `.txt` setup fills the sheet header, the federation tray, and the 45×40 battlefield. The same placements are stored in a browser draft and written into a SIM sheet workbook.
 
-`app/README.md` is the Angular CLI stub. This file is the handoff. Keep it as one document. Split only if a later slice adds a second screen, such as orders: leave this file as the index and add a short doc per screen.
+`app/README.md` is the Angular CLI stub. This file is the handoff. Keep it as one document.
 
 ## Run
 
@@ -19,7 +19,7 @@ cd app
 npx ng test
 ```
 
-Specs: `turn-parser.service.spec.ts` (reads `../124W0213.txt` and `../124D0113.txt`), `rules.service.spec.ts`, `excel-export.service.spec.ts`, `app.spec.ts`.
+Specs: `turn-parser.service.spec.ts` (reads `../124W0213.txt` and `../124D0113.txt`), `turn-archive-name.spec.ts`, `replay-parser.service.spec.ts`, `rules.service.spec.ts`, `excel-export.service.spec.ts`, `app.spec.ts`.
 
 The app is zoneless (no `zone.js`). After `await file.text()` and the other file fetches, `App` calls `ChangeDetectorRef.markForCheck()`. Any new async UI update needs the same, or a signal.
 
@@ -61,14 +61,26 @@ Then start `server`. It serves `app/dist/ausim-battle/browser` and exposes:
 
 - `POST /api/login`, `POST /api/logout`, `GET /api/me`
 - `POST /api/battles` (stores loaded turn text, including parse failures)
-- `POST /api/battles/:id/sheet` (stores workbook copy after Save SIM)
+- `POST /api/battles/:id/sheet` (stores the workbook copy after Save SIM)
+- `GET /api/setup-terrain?game=AU-124&letter=D&sim=196` (signed-in; returns the stored setup text for that nation, game, and sim)
 - `GET /api/admin/battles`, `GET /api/admin/battles/:id/turn`, `GET /api/admin/battles/:id/sheet` (admin only)
+
+A loaded turn is copied at once. The folder and file names come from the sheet:
+
+`{GameNo}_{StateLetter}_{MMYY}_Sim{N}`
+
+Example: game `AU-124`, the `AU 124 D` line, `Month: January 1813`, and `Simulated battle No. 196` become `AU-124_D_0113_Sim196`. The state letter is that single letter, not the nation name. A setup is `{folder}_Setup.txt`. A results turn is `{folder}_Battle.txt`. Save SIM writes `{folder}_Setup.xlsx` in the same folder. Loading the same game, letter, month, and sim again updates that folder. A setup and a battle saved from the same month share it. A different month is a different folder. The replay lookup ignores the month and uses the newest setup file for that game, state letter, and sim.
+
+If the `AU 124 D` line is missing, the copy stays in a timestamp folder under the original file name.
+
+Sessions are kept in memory. Restarting the server signs everyone out.
 
 Stored data layout:
 
-- `server/data/battles/{id}/turn.txt`
-- `server/data/battles/{id}/meta.json`
-- `server/data/battles/{id}/sheet.xlsx` (when Save SIM was used)
+- `server/data/battles/{GameNo}_{StateLetter}_{MMYY}_Sim{N}/meta.json`
+- `server/data/battles/{GameNo}_{StateLetter}_{MMYY}_Sim{N}/{folder}_Setup.txt`
+- `server/data/battles/{GameNo}_{StateLetter}_{MMYY}_Sim{N}/{folder}_Battle.txt`
+- `server/data/battles/{GameNo}_{StateLetter}_{MMYY}_Sim{N}/{folder}_Setup.xlsx` (after Save SIM)
 
 ### VPS + domain + HTTPS (Caddy)
 
@@ -103,7 +115,7 @@ Filled from the turn, except the fields the player sets:
 | Account | First `ACCOUNT:` in the file |
 | Player | First `Mr …` line, shown in capitals |
 | Process Date | Today, editable |
-| General Federation | Empty until typed. A number shows **Valid** beside it. Deployment area is on the same line to its right. Main terrain is the line under that |
+| General Federation | Empty until typed. Deployment area is on the same line to its right. Main terrain is the line under that |
 | Army | The side whose deployment-area name best matches State. Dropdown is `Army A : {nation}` or `Army B : {nation}` |
 
 The opponent line is the other army and its federation maximum.
@@ -138,16 +150,16 @@ The palette lists unplaced federations for the selected army, ordered by id. Two
 
 | Row | Buttons |
 | --- | --- |
-| 1 | Ty, XY, No, BG, Start, Ord, Add, Form, D1, D2 |
+| 1 | Ty, XY, No, BG, Start, Ord, Add, Form, TS, D1, D2 |
 | 2 | ACond, AOrd, AAdd, AForm, AD1, AD2 |
 
 **The Battle field** is left-aligned on one line with those buttons. The buttons are in that same line, right-aligned, with a gap and a dividing line after **D2**. The selected federation’s stored values fill the boxes under the buttons. Ty and No are shown only. A typed value is checked against the rules; an invalid entry is left unchanged. A typed coordinate must sit inside the selected army’s setup area, and it moves that chip to the new cell. Clearing a box removes that value.
 
-**XY**, **D1**, **D2**, **AD1**, and **AD2** are the coordinate views. A placed chip starts on its XY coordinate. It stays there for every other button. **D1**, **D2**, **AD1**, and **AD2** move it only when that destination is set; otherwise it stays on XY. A federation that is still in the tray stays there. These buttons leave the chip text unchanged. **Ty** and **No** only change the chip text. Enemy chips always show the troop code. Formation `0` stays `0`; other codes show the formation name when it is known.
+**XY**, **D1**, **D2**, **AD1**, and **AD2** are the only buttons that move chips. Each one shows that coordinate when the federation has it. A federation with no value for the selected coordinate stays where it already is. **Ty**, **No**, **BG**, **Start**, **Ord**, **Add**, **Form**, **TS**, and the alternative field buttons change the chip text only. Enemy chips always show the troop code. A new order row starts with order `0` and formation Column (`Co`). Formation `0` stays `0`; other codes show the formation name when it is known.
 
 **BG**, **Start**, **Ord**, **Add**, **Form**, **ACond**, **AOrd**, **AAdd**, and **AForm** edit that field. A left click on an empty own federation asks for a value. Saving a valid code opens the same choices as a federation that already has a value, plus **Keep entered value**. **Keep entered value** stores it on that federation only. Cancel discards it. A right click clears a value. A left click on a federation that already has a value offers **Paint same value** (later clicks fill empty federations until another action), **Paint value to all** (every empty federation), **Paint value to all** of that troop type, or **Change value**. **BG** does not offer those three paint actions. It offers **Change value**, **Paint next increment** (each later click on an empty federation writes one more than the last), **Paint next increment to all**, and **Paint next increment to all** of that troop type. Those two write a unique sequence: the selected federation keeps its number, later federation numbers get the next values, then earlier ones continue the sequence. Battalion group accepts 0–110. Start attack accepts 0–25. Orders, additional orders, formations, and conditions must match the rules catalog. Formation also accepts `Co`, `Li`, `Sk`, and `Sq`.
 
-**Ty** and **XY** are the setup views: drag a chip onto the setup zone, or select one and click the zone. The SIM sheet Fed No column is fixed at 1–110. A placement uses the lowest empty number, and never goes past the army’s federation maximum. BG is then set to that federation’s number from the turn, which is not the SIM sheet Fed No. Before a federation is placed, BG is empty. Placing writes that cell as the order-row start coordinate and fills the X/Y box for that chip. Removing it clears the whole record for that Fed No, so the number can be used again. Moving a federation that is already on the board keeps its Fed No. The next map click still places the next unplaced federation. **D1** places the selected federation on a cell inside the setup area and stores that cell as destination 1. A coordinate outside that area is rejected. The next battlefield click sets destination 1 for the next higher federation number that already has a start coordinate on the battlefield. **D2**, **AD1**, and **AD2** only preview those destinations. Several own chips may share one coordinate; they split that cell. Deployment placement is still one federation per cell.
+**Ty** and **XY** are the setup views: drag a chip onto the setup zone, or select one and click the zone. The SIM sheet Fed No column is fixed at 1–110. A placement uses the lowest empty number, and never goes past the army’s federation maximum. BG is then set to that federation’s number from the turn, which is not the SIM sheet Fed No. Before a federation is placed, BG is empty. Placing writes that cell as the order-row start coordinate and fills the X/Y box for that chip. Removing it clears the whole record for that Fed No, so the number can be used again. Moving a federation that is already on the board keeps its Fed No. The next map click still places the next unplaced federation. **D1**, **D2**, **AD1**, and **AD2** set that destination anywhere on the battlefield, including outside the setup zone. An unplaced federation can still be placed from the tray in any mode. A federation that is already on the board moves only while a coordinate button is selected. The next battlefield click sets the same destination for the next federation. Several own chips may share one coordinate; they split that cell. A start placement is still one federation per cell, and only inside the setup zone.
 
 - Drag a chip onto the setup zone, or click a chip and then click the map. After a click-place, the next higher unplaced id is armed. Clicking a chip on the map selects that federation.
 - Right-click a placed chip, or drag it back to the palette, to return it.
@@ -208,13 +220,19 @@ Save fills `app/public/SIM Sheet v0.6-Template.xlsx` (fetched as `/SIM Sheet v0.
 | Row `12 + federation id`, columns C and F–U | Battalion group and full primary/alternative order row |
 | Row `12 + federation id`, columns D and E | Start x/y, for ids 1–110 |
 
-Download name is `SIM Sheet v0.6-{State} Sim {N}.xlsx`. If that name already exists in `localStorage` or in `app/public/sim-sheets/`, the dialog offers **Overwrite** or **New version** (`_1`, `_2`, …).
+The browser download is named `SIM Sheet v0.6-{State} Sim {N}.xlsx`. If that name already exists in `localStorage` or in `app/public/sim-sheets/`, the dialog offers **Overwrite** or **New version** (`_1`, `_2`, …). The copy stored on the server uses `{folder}_Setup.xlsx`.
 
 **Load SIM** looks for the same name pattern. One match loads it. Several matches open a chooser. None shows “File not found”. A saved browser copy wins over the public file. Loaded values replace the general, the process date, placements that belong to the selected army and sit in its setup zone, and the fortress slots.
 
+## Replay
+
+`/replay` is signed-in. **Load New Turn** accepts a results file (`Simulated battle No. N Initial Deployment`) or a setup. A file that contains both asks which to open. A setup opens in the planner. A results file opens the replay: previous, play, next, and a round slider, with chip labels No, Ty, EF, Ord, Form, and TS.
+
+Terrain comes from a setup battlefield when one is available. The setup packed in the same file is used first. Otherwise the replay asks `/api/setup-terrain` for a stored setup with the same game number, state letter, and sim number. The month does not have to match. That setup supplies heights and terrain. Results-file marks such as woods, water, built-up, and special still overlay the current round. With no setup, the map is flat height 2 plus those marks.
+
 ## Not done
 
-- Order entry. Order rows load from the SIM sheet and the draft, show on the chips, and save back. There is still no form for typing an order. `app/src/app/models/battle.ts` has the row shape, and the rules JSON has the order catalog.
+- There is no separate order form. Order values are entered from the chip buttons, loaded from the SIM sheet and the draft, and saved back. `app/src/app/models/battle.ts` has the row shape, and the rules JSON has the order catalog.
 - Movement, combat, morale, and victory tables are data only.
 - Setup rectangles are hardcoded in `app.ts`, not read from the rules JSON.
 - Turn text does not supply federation start coordinates.
@@ -231,7 +249,12 @@ Sample turns live in the repo root, next to the SIM workbooks. Warsaw `124W0213.
 | `app/src/app/app.html` | Title, tabs, header, fortress slots, palette, map |
 | `app/src/app/app.css` | Header grid, fortress alignment, cell size, borders |
 | `app/src/app/app.ts` | File load, placement, chip modes, zoom, entrenchments, height colours |
+| `app/src/app/replay.ts` | Replay map, round slider, setup terrain |
+| `app/src/app/replay.html` | Replay header and map |
+| `app/src/app/services/replay-parser.service.ts` | Results grids, rounds, morale, terrain marks |
+| `app/src/app/services/turn-archive-name.ts` | Stored folder and file names, nation and game identity |
 | `app/src/app/services/turn-parser.service.ts` | Battlefield, brief, fortress line, battalion groups |
+| `server/src/server.mjs` | Login, stored turns, setup lookup, SIM sheet copy |
 | `app/src/app/models/turn.ts` | `ParsedTurn`, map, armies, fortress brief |
 | `app/src/app/models/battle.ts` | SIM header and unused order types |
 | `app/src/app/services/excel-export.service.ts` | Template fill, download, workbook round-trip |

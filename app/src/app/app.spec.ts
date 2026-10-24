@@ -665,4 +665,193 @@ describe('App', () => {
     expect(app.statusMessage).toContain('Select a federation');
     expect(app.federationOrders.get(1)?.primary.destination2).toEqual({ x: 6, y: 24 });
   });
+
+  it('shift-selects a federation range and copies it into a deployment rectangle', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      getUnplacedUnits(): Array<{ id: number }>;
+      inDeployGroup(unitId: number): boolean;
+      isDeployAnchor(x: number, y: number): boolean;
+      inDeployPreview(x: number, y: number): boolean;
+      onDeployPreviewMove(event: MouseEvent, x: number, y: number): void;
+      onDeployPreviewKey(event: KeyboardEvent): void;
+      cellShadow(cell: { x: number; y: number; token: string; feature: 'open'; height: number }): string;
+      cellChips(x: number, y: number): unknown[];
+      setupZones: { A: { minX: number; maxX: number; minY: number; maxY: number }; B: { minX: number; maxX: number; minY: number; maxY: number } };
+      selectedArmySide: 'A' | 'B';
+      placements: Map<number, { x: number; y: number }>;
+      statusMessage: string;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const shift = new MouseEvent('click', { shiftKey: true });
+    const click = new MouseEvent('click');
+    const zone = app.setupZones[app.selectedArmySide];
+    const unplaced = () => app.getUnplacedUnits().map((unit) => unit.id).sort((left, right) => left - right);
+    const selectRange = (low: number, high: number) => {
+      app.onPaletteUnitClick(click, high);
+      app.onPaletteUnitClick(shift, low);
+    };
+
+    const ids = unplaced();
+    const selected = ids.slice(0, 6);
+    selectRange(selected[0], selected[5]);
+    expect(app.statusMessage).toBe(
+      '6 units selected, shift-click the beginning and end of the area to deploy to.',
+    );
+    expect(selected.every((id) => app.inDeployGroup(id))).toBe(true);
+    expect(app.inDeployGroup(ids[6])).toBe(false);
+
+    const endX = Math.min(zone.maxX, zone.minX + 2);
+    const endY = Math.min(zone.maxY, zone.minY + 1);
+    app.onCellClick(shift, zone.minX, zone.minY);
+    expect(app.isDeployAnchor(zone.minX, zone.minY)).toBe(true);
+    app.onDeployPreviewMove(shift, endX, endY);
+    expect(app.inDeployPreview(zone.minX, zone.minY)).toBe(true);
+    expect(app.inDeployPreview(endX, endY)).toBe(true);
+    expect(app.inDeployPreview(endX + 1, endY)).toBe(false);
+    const plain = (x: number, y: number) => ({ x, y, token: '.', feature: 'open' as const, height: 1 });
+    expect(app.cellShadow(plain(zone.minX, zone.minY))).toBe('inset 0 3px 0 #fff, inset 3px 0 0 #fff');
+    expect(app.cellShadow(plain(zone.minX + 1, endY))).not.toContain('inset 3px 0 0 #fff');
+    expect(app.cellShadow(plain(endX + 1, endY))).toBe('');
+    app.onDeployPreviewKey(new KeyboardEvent('keyup', { key: 'Shift' }));
+    expect(app.isDeployAnchor(zone.minX, zone.minY)).toBe(true);
+    expect(app.inDeployPreview(endX, endY)).toBe(false);
+    app.onDeployPreviewKey(new KeyboardEvent('keydown', { key: 'Shift' }));
+    expect(app.inDeployPreview(endX, endY)).toBe(true);
+
+    app.onCellClick(click, 1, 20);
+    expect(app.statusMessage).toBe('Selection cleared.');
+    expect(app.inDeployGroup(selected[0])).toBe(false);
+    expect(app.placements.has(selected[0])).toBe(false);
+
+    selectRange(selected[0], selected[5]);
+    app.onCellClick(shift, zone.minX, zone.minY);
+    app.onCellClick(shift, 1, 20);
+    expect(app.statusMessage).toBe('Selection cleared. Both shift-clicks must be inside the deployment area.');
+    expect(app.placements.has(selected[0])).toBe(false);
+
+    selectRange(selected[0], selected[5]);
+    app.onCellClick(click, zone.minX, zone.maxY);
+    expect(app.placements.get(selected[0])).toEqual({ x: zone.minX, y: zone.maxY });
+    expect(app.placements.has(selected[1])).toBe(false);
+    expect(app.inDeployGroup(selected[1])).toBe(false);
+
+    const rest = unplaced().slice(0, 6);
+    selectRange(rest[0], rest[5]);
+    const rowY = zone.minY;
+    let rowX = zone.minX;
+    while (rowX + 2 <= zone.maxX && [0, 1, 2].some((offset) => app.cellChips(rowX + offset, rowY).length)) {
+      rowX += 1;
+    }
+    app.onCellClick(shift, rowX + 2, rowY);
+    app.onCellClick(shift, rowX, rowY);
+    expect(app.placements.get(rest[0])).toEqual({ x: rowX, y: rowY });
+    expect(app.placements.get(rest[1])).toEqual({ x: rowX + 1, y: rowY });
+    expect(app.placements.get(rest[2])).toEqual({ x: rowX + 2, y: rowY });
+    expect(app.placements.has(rest[3])).toBe(false);
+    expect(app.statusMessage).toBe('3 fed selected, shift-click the beginning and end of the area to deploy to.');
+
+    const box = unplaced().slice(0, 6);
+    selectRange(box[5], box[0]);
+    let boxX = zone.minX;
+    let boxY = zone.minY + 2;
+    const blocked = (x: number, y: number) =>
+      app.cellChips(x, y).length > 0 || app.cellChips(x + 1, y).length > 0 || app.cellChips(x, y + 1).length > 0 || app.cellChips(x + 1, y + 1).length > 0;
+    while (boxY + 1 <= zone.maxY && blocked(boxX, boxY)) {
+      boxX += 2;
+      if (boxX + 1 > zone.maxX) {
+        boxX = zone.minX;
+        boxY += 2;
+      }
+    }
+    app.onCellClick(shift, boxX + 1, boxY + 1);
+    app.onCellClick(shift, boxX, boxY);
+    expect(app.placements.get(box[0])).toEqual({ x: boxX, y: boxY });
+    expect(app.placements.get(box[1])).toEqual({ x: boxX + 1, y: boxY });
+    expect(app.placements.get(box[2])).toEqual({ x: boxX, y: boxY + 1 });
+    expect(app.placements.get(box[3])).toEqual({ x: boxX + 1, y: boxY + 1 });
+    expect(app.placements.has(box[4])).toBe(false);
+    expect(app.statusMessage).toBe('2 fed selected, shift-click the beginning and end of the area to deploy to.');
+  });
+
+  it('rejects a fortress wall and allows only one federation inside', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      onArmySelected(army: string): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      getUnplacedUnits(): Array<{ id: number }>;
+      selectedArmySide: 'A' | 'B';
+      placements: Map<number, { x: number; y: number }>;
+      statusMessage: string;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124W0213.txt'), 'utf8');
+    const file = new File([body], '124W0213.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    app.onArmySelected('Army A');
+    const click = new MouseEvent('click');
+    const [first, second, third] = app.getUnplacedUnits();
+
+    app.onPaletteUnitClick(click, first.id);
+    app.onCellClick(click, 20, 1);
+    expect(app.statusMessage).toBe('Drop rejected: a federation cannot deploy on a fortress wall.');
+    expect(app.placements.has(first.id)).toBe(false);
+
+    app.onCellClick(click, 22, 4);
+    expect(app.statusMessage).toBe('Drop rejected: a federation cannot deploy on a fortress wall.');
+    expect(app.placements.has(first.id)).toBe(false);
+
+    app.onCellClick(click, 22, 2);
+    expect(app.placements.get(first.id)).toEqual({ x: 22, y: 2 });
+
+    app.onPaletteUnitClick(click, second.id);
+    app.onCellClick(click, 24, 3);
+    expect(app.statusMessage).toBe('Drop rejected: the fortress already holds a federation.');
+    expect(app.placements.has(second.id)).toBe(false);
+
+    app.onPaletteUnitClick(click, third.id);
+    app.onCellClick(click, 23, 5);
+    expect(app.placements.get(third.id)).toEqual({ x: 23, y: 5 });
+  });
+
+  it('marks the next deploy federation in white and the last placed federation in pink', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      getUnplacedUnits(): Array<{ id: number }>;
+      isNextDeploy(unitId: number): boolean;
+      isLastPlaced(unitId: number): boolean;
+      setupZones: { A: { minX: number; minY: number; maxX: number; maxY: number }; B: { minX: number; minY: number; maxX: number; maxY: number } };
+      selectedArmySide: 'A' | 'B';
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    const click = new MouseEvent('click');
+    const [first, second] = app.getUnplacedUnits();
+    const zone = app.setupZones[app.selectedArmySide];
+
+    app.onPaletteUnitClick(click, first.id);
+    expect(app.isNextDeploy(first.id)).toBe(true);
+    expect(app.isNextDeploy(second.id)).toBe(false);
+    expect(app.isLastPlaced(first.id)).toBe(false);
+
+    app.onCellClick(click, zone.minX, zone.minY);
+    expect(app.isLastPlaced(first.id)).toBe(true);
+    expect(app.isNextDeploy(first.id)).toBe(false);
+    expect(app.isNextDeploy(second.id)).toBe(true);
+
+    app.onCellClick(click, zone.minX + 1, zone.minY);
+    expect(app.isLastPlaced(second.id)).toBe(true);
+    expect(app.isLastPlaced(first.id)).toBe(false);
+    expect(app.isNextDeploy(second.id)).toBe(false);
+  });
 });

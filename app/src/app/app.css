@@ -319,6 +319,7 @@ input[type='date'] {
   justify-content: start;
   gap: 0;
   padding-left: calc(var(--axis-w) + 1px);
+  user-select: none;
 }
 
 .deploy-heading {
@@ -476,6 +477,7 @@ span.chip-mode-value {
   background: #0f1723;
   width: max-content;
   border: 1px solid #44546d;
+  user-select: none;
 }
 
 .axis {
@@ -628,6 +630,17 @@ span.chip-mode-value {
   box-shadow: inset 0 0 0 3px #fff;
 }
 
+.unit-card.range-selected,
+.unit-card.range-selected.armed,
+.unit-card.range-selected.armed.army-a-chip,
+.unit-card.range-selected.armed.army-b-chip,
+.unit-card.range-selected.next-paint,
+.unit-card.range-selected.next-paint.army-a-chip,
+.unit-card.range-selected.next-paint.army-b-chip {
+  border: 2px solid #fff;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
 .unit-card.armed.army-a-chip {
   box-shadow: inset 0 0 0 3px #ff1744, 0 0 0 2px #ff5252;
 }
@@ -642,6 +655,30 @@ span.chip-mode-value {
 
 .unit-card.next-paint.army-b-chip {
   box-shadow: inset 0 0 0 2px #80d8ff, 0 0 0 1px #40c4ff;
+}
+
+.palette-grid > .unit-card.next-deploy,
+.palette-grid > .unit-card.next-deploy.armed,
+.palette-grid > .unit-card.next-deploy.armed.army-a-chip,
+.palette-grid > .unit-card.next-deploy.armed.army-b-chip,
+.palette-grid > .unit-card.next-deploy.next-paint,
+.palette-grid > .unit-card.next-deploy.next-paint.army-a-chip,
+.palette-grid > .unit-card.next-deploy.next-paint.army-b-chip,
+.palette-grid > .unit-card.next-deploy.range-selected {
+  border: 2px solid #fff;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
+.unit-card.last-placed,
+.unit-card.last-placed.armed,
+.unit-card.last-placed.armed.army-a-chip,
+.unit-card.last-placed.armed.army-b-chip,
+.unit-card.last-placed.next-paint,
+.unit-card.last-placed.next-paint.army-a-chip,
+.unit-card.last-placed.next-paint.army-b-chip {
+  border: 3px solid #ff4fd8;
+  box-shadow: inset 0 0 0 3px #ff4fd8;
+  z-index: 6;
 }
 
 .cell > .unit-card,

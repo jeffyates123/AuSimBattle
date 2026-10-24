@@ -161,6 +161,12 @@ export class App {
   protected highlightedFederationId: number | null = null;
   protected highlightedFederationKind: 'own' | 'enemy' = 'own';
   private armedFederationId: number | null = null;
+  private lastPlacedFederationId: number | null = null;
+  private deployRangeAnchor: number | null = null;
+  private deployGroup: number[] | null = null;
+  private deployAreaAnchor: { x: number; y: number } | null = null;
+  private deployAreaHover: { x: number; y: number } | null = null;
+  private deployPointer: { x: number; y: number } | null = null;
   private sheetFedNo = new Map<number, number>();
   private layoutRevision = 0;
   private readonly chipPositionOverride = new Map<number, Coordinate>();
@@ -327,6 +333,7 @@ export class App {
     this.sheetFedNo = new Map<number, number>();
     this.heldPosition.clear();
     this.highlightedFederationId = null;
+    this.clearDeploySelection();
     this.fortressEntrenchments = this.emptyFortressEntrenchments();
     this.awaitingEntrenchment = false;
 
@@ -348,6 +355,10 @@ export class App {
   }
 
   protected onUnitDragStart(event: DragEvent, unitId: number): void {
+    if (event.shiftKey) {
+      event.preventDefault();
+      return;
+    }
     this.draggingUnitId = unitId;
     event.dataTransfer?.setData('text/plain', String(unitId));
     if (event.dataTransfer) {
@@ -361,9 +372,14 @@ export class App {
   }
 
   protected onPaletteUnitClick(event: MouseEvent, unitId: number): void {
+    if (event.shiftKey) {
+      this.shiftSelectDeployUnit(unitId);
+      return;
+    }
     if (performance.now() - this.lastPaletteDragAt < 400) {
       return;
     }
+    this.clearDeploySelection();
     if (this.beginValueEdit(unitId, event.detail)) {
       return;
     }
@@ -371,8 +387,51 @@ export class App {
     this.armedFederationId = unitId;
   }
 
+  protected inDeployGroup(unitId: number): boolean {
+    return this.deployRangeAnchor === unitId || (this.deployGroup?.includes(unitId) ?? false);
+  }
+
+  protected isNextDeploy(unitId: number): boolean {
+    return this.nextDeployUnitId() === unitId;
+  }
+
+  protected isLastPlaced(unitId: number): boolean {
+    return this.lastPlacedFederationId === unitId;
+  }
+
+  private nextDeployUnitId(): number | null {
+    if (this.deployGroup?.length) {
+      return this.deployGroup[0];
+    }
+    if (this.deployRangeAnchor !== null) {
+      return this.deployRangeAnchor;
+    }
+    const armed = this.armedFederationId;
+    if (armed !== null && this.getUnplacedUnits().some((unit) => unit.id === armed)) {
+      return armed;
+    }
+    const highlighted = this.highlightedFederationKind === 'own' ? this.highlightedFederationId : null;
+    if (highlighted !== null && this.getUnplacedUnits().some((unit) => unit.id === highlighted)) {
+      return highlighted;
+    }
+    return null;
+  }
+
   protected onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void {
     event.stopPropagation();
+    if (this.deployGroup?.length) {
+      const coord = this.coordinateOfChip(unitId, kind);
+      if (coord) {
+        this.onDeployAreaClick(event, coord.x, coord.y);
+      } else {
+        this.clearDeploySelection();
+        this.statusMessage = 'Selection cleared.';
+      }
+      return;
+    }
+    if (this.deployRangeAnchor !== null) {
+      this.deployRangeAnchor = null;
+    }
     if (kind === 'own' && event.detail >= 2) {
       this.closeUnitMenus();
       this.returnToPool(unitId);
@@ -685,6 +744,14 @@ export class App {
     this.autoSaveDraft();
   }
 
+  protected keepShiftClickFromSelectingText(event: MouseEvent): void {
+    if (!event.shiftKey) {
+      return;
+    }
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+  }
+
   protected onCellDragOver(event: DragEvent): void {
     event.preventDefault();
     if (event.dataTransfer) {
@@ -734,6 +801,13 @@ export class App {
         return;
       }
       this.awaitingEntrenchment = false;
+    }
+    if (this.deployGroup?.length) {
+      this.onDeployAreaClick(event, x, y);
+      return;
+    }
+    if (this.deployRangeAnchor !== null) {
+      this.deployRangeAnchor = null;
     }
     if (this.isDestinationMode(this.chipDisplayMode) && !(this.armedUnitNeedsPlacement() && this.inSelectedSetup(x, y))) {
       this.placeDestination(this.chipDisplayMode, x, y);
@@ -1278,6 +1352,9 @@ export class App {
     if (this.isDestinationMode(this.chipDisplayMode)) {
       return this.nextBattlefieldFederation(current)?.id ?? null;
     }
+    if (this.deployGroup?.length) {
+      return null;
+    }
     if (this.armedFederationId !== null && this.armedFederationId !== current) {
       return this.armedFederationId;
     }
@@ -1491,7 +1568,7 @@ export class App {
   }
 
   protected cellShadow(cell: MapCell): string {
-    return this.specialBorderShadow(cell);
+    return [this.specialBorderShadow(cell), this.deployBoxShadow(cell.x, cell.y)].filter(Boolean).join(', ');
   }
 
   protected armyChoiceLabel(army: 'Army A' | 'Army B'): string {
@@ -2210,6 +2287,7 @@ export class App {
     this.federationOrders.clear();
     this.sheetFedNo.clear();
     this.highlightedFederationId = null;
+    this.clearDeploySelection();
     this.rebuildOccupancyMaps();
     this.statusMessage = 'All federations moved back to tray and their orders were cleared.';
     this.autoSaveDraft();
@@ -2221,6 +2299,9 @@ export class App {
     }
     const fedNo = this.sheetFedNo.get(unitId);
     this.releaseFederation(unitId);
+    if (this.lastPlacedFederationId === unitId) {
+      this.lastPlacedFederationId = null;
+    }
     this.rebuildOccupancyMaps();
     this.statusMessage = fedNo
       ? `Federation ${unitId} moved back to tray. Fed No ${fedNo} was cleared.`
@@ -2312,34 +2393,44 @@ export class App {
     return { placements, orders };
   }
 
-  private placeFederation(unitId: number, x: number, y: number): void {
+  private placeFederation(unitId: number, x: number, y: number, quiet = false): boolean {
+    const reject = (message: string): boolean => {
+      this.statusMessage = message;
+      return false;
+    };
     if (!this.selectedArmySide || !this.selectedArmy) {
-      return;
+      return false;
     }
     if (!unitId || !this.selectedArmy.units.some((unit) => unit.id === unitId)) {
-      return;
+      return false;
     }
 
     if (!this.inZone({ x, y }, this.setupZones[this.selectedArmySide])) {
-      this.statusMessage = 'Drop rejected: outside setup area.';
-      return;
+      return reject('Drop rejected: outside setup area.');
+    }
+
+    const fortressMessage = this.fortressPlacementRejection(unitId, x, y);
+    if (fortressMessage?.includes('fortress wall')) {
+      return reject(fortressMessage);
     }
 
     if (this.enemyHasCoord(x, y)) {
-      this.statusMessage = 'Drop rejected: enemy federation occupies that coordinate.';
-      return;
+      return reject('Drop rejected: enemy federation occupies that coordinate.');
+    }
+
+    if (fortressMessage) {
+      return reject(fortressMessage);
     }
 
     const source = this.placements.get(unitId) ?? null;
     const occupant = this.ownByCoord.get(this.coordKey(x, y));
     if (occupant && occupant.id === unitId) {
-      return;
+      return false;
     }
 
     const placementLimit = this.getPlacementLimit();
     if (!source && !occupant && placementLimit !== null && this.placements.size >= placementLimit) {
-      this.statusMessage = `Drop rejected: deployment limit of ${placementLimit} reached.`;
-      return;
+      return reject(`Drop rejected: deployment limit of ${placementLimit} reached.`);
     }
 
     let replacedId: number | null = null;
@@ -2347,7 +2438,9 @@ export class App {
       if (source) {
         this.placements.set(occupant.id, source);
         this.syncSetupCoordinate(occupant.id, source);
-        this.statusMessage = `Swapped federation ${unitId} with ${occupant.id}.`;
+        if (!quiet) {
+          this.statusMessage = `Swapped federation ${unitId} with ${occupant.id}.`;
+        }
       } else {
         replacedId = occupant.id;
         this.releaseFederation(occupant.id);
@@ -2356,22 +2449,256 @@ export class App {
 
     const fedNo = this.assignSheetFedNo(unitId);
     if (fedNo === null) {
-      this.statusMessage = 'Drop rejected: no free federation number.';
-      return;
+      return reject('Drop rejected: no free federation number.');
     }
-    if (replacedId !== null) {
+    if (!quiet && replacedId !== null) {
       this.statusMessage = `Replaced federation ${replacedId} with ${unitId} as Fed No ${fedNo}.`;
-    } else if (!occupant) {
+    } else if (!quiet && !occupant) {
       this.statusMessage = `Placed federation ${unitId} as Fed No ${fedNo} at ${x}/${y}.`;
     }
 
     this.placements.set(unitId, { x, y });
     this.syncSetupCoordinate(unitId, { x, y });
     this.chipPositionOverride.delete(unitId);
-    this.selectFederation(unitId, 'own');
-    this.armNextUnplaced(unitId);
+    this.lastPlacedFederationId = unitId;
+    if (!quiet) {
+      this.selectFederation(unitId, 'own');
+      this.armNextUnplaced(unitId);
+    }
     this.rebuildOccupancyMaps();
     this.autoSaveDraft();
+    return true;
+  }
+
+  private shiftSelectDeployUnit(unitId: number): void {
+    if (!this.getUnplacedUnits().some((unit) => unit.id === unitId)) {
+      return;
+    }
+    const startId = this.nextDeployUnitId();
+    this.clearDeployAreaMark();
+    this.deployRangeAnchor = null;
+    if (startId === null || startId === unitId) {
+      this.deployGroup = null;
+      this.selectFederation(unitId, 'own');
+      this.armedFederationId = unitId;
+      return;
+    }
+    const ids = this.unplacedIdsBetween(startId, unitId);
+    this.deployGroup = ids;
+    this.selectFederation(ids[0], 'own');
+    this.armedFederationId = ids[0];
+    this.statusMessage = `${ids.length} units selected, shift-click the beginning and end of the area to deploy to.`;
+  }
+
+  private unplacedIdsBetween(startId: number, endId: number): number[] {
+    const low = Math.min(startId, endId);
+    const high = Math.max(startId, endId);
+    return this.getUnplacedUnits()
+      .map((unit) => unit.id)
+      .filter((id) => id >= low && id <= high)
+      .sort((left, right) => left - right);
+  }
+
+  private onDeployAreaClick(event: MouseEvent, x: number, y: number): void {
+    const group = this.deployGroup;
+    if (!group?.length) {
+      return;
+    }
+    const inside = this.inSelectedSetup(x, y);
+    if (!event.shiftKey) {
+      if (!inside) {
+        this.clearDeploySelection();
+        this.statusMessage = 'Selection cleared.';
+        return;
+      }
+      const first = group[0];
+      this.clearDeploySelection();
+      this.selectFederation(first, 'own');
+      this.armedFederationId = first;
+      this.placeFederation(first, x, y);
+      return;
+    }
+    if (!inside) {
+      this.clearDeploySelection();
+      this.statusMessage = 'Selection cleared. Both shift-clicks must be inside the deployment area.';
+      return;
+    }
+    if (!this.deployAreaAnchor) {
+      this.deployAreaAnchor = { x, y };
+      this.deployPointer = { x, y };
+      this.deployAreaHover = { x, y };
+      this.statusMessage = `${group.length} units selected, shift-click the other corner of the area to deploy to.`;
+      return;
+    }
+    const start = this.deployAreaAnchor;
+    this.clearDeployAreaMark();
+    this.placeDeployGroup(start, { x, y });
+  }
+
+  protected isDeployAnchor(x: number, y: number): boolean {
+    return this.deployAreaAnchor?.x === x && this.deployAreaAnchor?.y === y;
+  }
+
+  protected inDeployPreview(x: number, y: number): boolean {
+    const anchor = this.deployAreaAnchor;
+    const hover = this.deployAreaHover;
+    if (!anchor || !hover || !this.inSelectedSetup(x, y)) {
+      return false;
+    }
+    const minX = Math.min(anchor.x, hover.x);
+    const maxX = Math.max(anchor.x, hover.x);
+    const minY = Math.min(anchor.y, hover.y);
+    const maxY = Math.max(anchor.y, hover.y);
+    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+  }
+
+  private deployBoxShadow(x: number, y: number): string {
+    const anchor = this.deployAreaAnchor;
+    if (!anchor || x < 1 || y < 1) {
+      return '';
+    }
+    const end = this.deployAreaHover ?? anchor;
+    const minX = Math.min(anchor.x, end.x);
+    const maxX = Math.max(anchor.x, end.x);
+    const minY = Math.min(anchor.y, end.y);
+    const maxY = Math.max(anchor.y, end.y);
+    if (x < minX || x > maxX || y < minY || y > maxY) {
+      return '';
+    }
+    const shadows: string[] = [];
+    if (y === minY) {
+      shadows.push('inset 0 3px 0 #fff');
+    }
+    if (y === maxY) {
+      shadows.push('inset 0 -3px 0 #fff');
+    }
+    if (x === minX) {
+      shadows.push('inset 3px 0 0 #fff');
+    }
+    if (x === maxX) {
+      shadows.push('inset -3px 0 0 #fff');
+    }
+    return shadows.join(', ');
+  }
+
+  protected onDeployPreviewMove(event: MouseEvent, x: number, y: number): void {
+    if (!this.deployGroup?.length || !this.deployAreaAnchor) {
+      return;
+    }
+    if (!this.inSelectedSetup(x, y)) {
+      this.setDeployPreview(null, event.shiftKey);
+      return;
+    }
+    this.setDeployPreview({ x, y }, event.shiftKey);
+  }
+
+  protected onDeployPreviewLeave(): void {
+    if (!this.deployAreaHover && !this.deployPointer) {
+      return;
+    }
+    this.setDeployPreview(null, false);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  @HostListener('document:keyup', ['$event'])
+  protected onDeployPreviewKey(event: KeyboardEvent): void {
+    if (event.key !== 'Shift' || !this.deployAreaAnchor || !this.deployGroup?.length) {
+      return;
+    }
+    this.setDeployPreview(this.deployPointer, event.type === 'keydown');
+  }
+
+  private setDeployPreview(pointer: { x: number; y: number } | null, shift: boolean): void {
+    const hover = shift && pointer ? pointer : null;
+    if (this.sameCell(this.deployPointer, pointer) && this.sameCell(this.deployAreaHover, hover)) {
+      return;
+    }
+    this.deployPointer = pointer;
+    this.deployAreaHover = hover;
+    this.changeDetector.markForCheck();
+  }
+
+  private sameCell(left: { x: number; y: number } | null, right: { x: number; y: number } | null): boolean {
+    return left?.x === right?.x && left?.y === right?.y;
+  }
+
+  private clearDeployAreaMark(): void {
+    this.deployAreaAnchor = null;
+    this.deployAreaHover = null;
+    this.deployPointer = null;
+  }
+
+  private placeDeployGroup(start: { x: number; y: number }, end: { x: number; y: number }): void {
+    const group = this.deployGroup;
+    if (!group?.length) {
+      return;
+    }
+    let placed = 0;
+    for (const cell of this.deploymentCells(start, end)) {
+      if (!group.length) {
+        break;
+      }
+      if (
+        this.enemyHasCoord(cell.x, cell.y) ||
+        this.ownByCoord.has(this.coordKey(cell.x, cell.y)) ||
+        this.fortressPlacementRejection(group[0], cell.x, cell.y)
+      ) {
+        continue;
+      }
+      const unitId = group[0];
+      if (!this.placeFederation(unitId, cell.x, cell.y, true)) {
+        const reason = this.statusMessage || 'Could not place the next federation.';
+        this.selectFederation(group[0], 'own');
+        this.armedFederationId = group[0];
+        this.statusMessage = `${reason} ${group.length} fed selected, shift-click the beginning and end of the area to deploy to.`;
+        return;
+      }
+      group.shift();
+      placed += 1;
+    }
+    if (!group.length) {
+      this.clearDeploySelection();
+      this.armedFederationId = null;
+      this.statusMessage = `Placed ${placed} federations.`;
+      return;
+    }
+    this.selectFederation(group[0], 'own');
+    this.armedFederationId = group[0];
+    this.statusMessage = placed
+      ? `${group.length} fed selected, shift-click the beginning and end of the area to deploy to.`
+      : `No empty squares in that area. ${group.length} fed selected, shift-click the beginning and end of the area to deploy to.`;
+  }
+
+  private deploymentCells(
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+  ): Array<{ x: number; y: number }> {
+    const minX = Math.min(start.x, end.x);
+    const maxX = Math.max(start.x, end.x);
+    const minY = Math.min(start.y, end.y);
+    const maxY = Math.max(start.y, end.y);
+    const cells: Array<{ x: number; y: number }> = [];
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        if (this.inSelectedSetup(x, y)) {
+          cells.push({ x, y });
+        }
+      }
+    }
+    return cells;
+  }
+
+  private coordinateOfChip(unitId: number, kind: 'own' | 'enemy'): { x: number; y: number } | null {
+    if (kind === 'own') {
+      return this.placements.get(unitId) ?? null;
+    }
+    return this.enemyArmy?.units.find((unit) => unit.id === unitId)?.start ?? null;
+  }
+
+  private clearDeploySelection(): void {
+    this.deployRangeAnchor = null;
+    this.deployGroup = null;
+    this.clearDeployAreaMark();
   }
 
   private isDestinationMode(
@@ -2635,6 +2962,146 @@ export class App {
     }
     const cell = this.rows[y - 1]?.[x - 1];
     return cell?.x === x && cell.token.startsWith('$');
+  }
+
+  private fortressRoleRows: MapCell[][] | null = null;
+  private fortressRoleCache: Map<string, { role: 'wall' | 'interior'; zone: string }> | null = null;
+
+  private fortressPlacementRejection(unitId: number, x: number, y: number): string | null {
+    const role = this.fortressRoles().get(this.coordKey(x, y));
+    if (!role) {
+      return null;
+    }
+    if (role.role === 'wall') {
+      return 'Drop rejected: a federation cannot deploy on a fortress wall.';
+    }
+    const occupant = this.ownByCoord.get(this.coordKey(x, y));
+    const others = this.fortressHolders(role.zone).filter((holder) => !(holder.kind === 'own' && holder.id === unitId));
+    if (others.length === 0) {
+      return null;
+    }
+    if (others.length === 1 && occupant && others[0].kind === 'own' && others[0].id === occupant.id) {
+      return null;
+    }
+    return 'Drop rejected: the fortress already holds a federation.';
+  }
+
+  private fortressHolders(zone: string): Array<{ id: number; kind: 'own' | 'enemy' }> {
+    const holders: Array<{ id: number; kind: 'own' | 'enemy' }> = [];
+    this.fortressRoles().forEach((role, key) => {
+      if (role.role !== 'interior' || role.zone !== zone) {
+        return;
+      }
+      const own = this.ownByCoord.get(key);
+      if (own) {
+        holders.push({ id: own.id, kind: 'own' });
+      }
+      const enemy = this.enemyByCoord.get(key);
+      if (enemy) {
+        holders.push({ id: enemy.id, kind: 'enemy' });
+      }
+    });
+    return holders;
+  }
+
+  private fortressRoles(): Map<string, { role: 'wall' | 'interior'; zone: string }> {
+    if (this.fortressRoleCache && this.fortressRoleRows === this.rows) {
+      return this.fortressRoleCache;
+    }
+    const roles = new Map<string, { role: 'wall' | 'interior'; zone: string }>();
+    const seen = new Set<string>();
+    for (const row of this.rows) {
+      for (const cell of row) {
+        const key = this.coordKey(cell.x, cell.y);
+        if (!cell.token.startsWith('$') || seen.has(key)) {
+          continue;
+        }
+        const walls = this.fortressWallsFrom(cell.x, cell.y, seen);
+        const zone = walls.map((wall) => this.coordKey(wall.x, wall.y)).sort()[0] ?? key;
+        for (const wall of walls) {
+          roles.set(this.coordKey(wall.x, wall.y), { role: 'wall', zone });
+        }
+        for (const inside of this.fortressInterior(walls)) {
+          roles.set(this.coordKey(inside.x, inside.y), { role: 'interior', zone });
+        }
+      }
+    }
+    this.fortressRoleRows = this.rows;
+    this.fortressRoleCache = roles;
+    return roles;
+  }
+
+  private fortressWallsFrom(x: number, y: number, seen: Set<string>): Array<{ x: number; y: number }> {
+    const walls: Array<{ x: number; y: number }> = [];
+    const pending = [{ x, y }];
+    while (pending.length) {
+      const current = pending.pop();
+      if (!current || !this.isFortressSquare(current.x, current.y)) {
+        continue;
+      }
+      const key = this.coordKey(current.x, current.y);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      walls.push(current);
+      pending.push(
+        { x: current.x - 1, y: current.y },
+        { x: current.x + 1, y: current.y },
+        { x: current.x, y: current.y - 1 },
+        { x: current.x, y: current.y + 1 },
+      );
+    }
+    return walls;
+  }
+
+  private fortressInterior(walls: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
+    const blocked = new Set(walls.map((wall) => this.coordKey(wall.x, wall.y)));
+    const minX = Math.min(...walls.map((wall) => wall.x));
+    const maxX = Math.max(...walls.map((wall) => wall.x));
+    const minY = Math.min(...walls.map((wall) => wall.y));
+    const maxY = Math.max(...walls.map((wall) => wall.y));
+    const reached = new Set<string>();
+    const pending: Array<{ x: number; y: number }> = [];
+    for (let y = minY - 1; y <= maxY + 1; y += 1) {
+      for (let x = minX - 1; x <= maxX + 1; x += 1) {
+        const outside = x < minX || x > maxX || y < minY || y > maxY;
+        if (outside && this.onMap(x, y) && !blocked.has(this.coordKey(x, y))) {
+          pending.push({ x, y });
+        }
+      }
+    }
+    while (pending.length) {
+      const current = pending.pop();
+      if (!current || !this.onMap(current.x, current.y)) {
+        continue;
+      }
+      const key = this.coordKey(current.x, current.y);
+      if (reached.has(key) || blocked.has(key)) {
+        continue;
+      }
+      reached.add(key);
+      pending.push(
+        { x: current.x - 1, y: current.y },
+        { x: current.x + 1, y: current.y },
+        { x: current.x, y: current.y - 1 },
+        { x: current.x, y: current.y + 1 },
+      );
+    }
+    const interior: Array<{ x: number; y: number }> = [];
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        const key = this.coordKey(x, y);
+        if (!blocked.has(key) && !reached.has(key)) {
+          interior.push({ x, y });
+        }
+      }
+    }
+    return interior;
+  }
+
+  private isFortressSquare(x: number, y: number): boolean {
+    return this.rows[y - 1]?.[x - 1]?.token.startsWith('$') ?? false;
   }
 
   private emptyFortressEntrenchments(): Array<{ x: number | null; y: number | null }> {

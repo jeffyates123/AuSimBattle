@@ -223,8 +223,8 @@
             <button
               type="button"
               class="info-tip"
-              title="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
-              aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence."
+              title="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence. Click a federation, then Shift-click another to select the range. Shift-click one corner in the deployment area, and the rectangle follows the pointer while Shift is held. Shift-click the other corner to place them."
+              aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence. Click a federation, then Shift-click another to select the range. Shift-click one corner in the deployment area, and the rectangle follows the pointer while Shift is held. Shift-click the other corner to place them."
             >i</button>
           }
           @if (selectedArmy && parsedTurn.armies.length) {
@@ -316,7 +316,7 @@
           </div>
         }
         @if (sheetView === 'deploy' && selectedArmy && parsedTurn.armies.length) {
-          <div id="deploy-panel" class="palette-grid" role="tabpanel" aria-labelledby="deploy-tab">
+          <div id="deploy-panel" class="palette-grid" role="tabpanel" aria-labelledby="deploy-tab" (mousedown)="keepShiftClickFromSelectingText($event)">
             @for (unit of getUnplacedUnits(); track unit.id) {
               <div
                 class="unit-card own"
@@ -327,6 +327,8 @@
                 [class.troop-artillery]="troopFamily(unit, selectedArmy.name) === 'artillery'"
                 [class.armed]="chipHighlight(unit.id, 'own') === 'current'"
                 [class.next-paint]="chipHighlight(unit.id, 'own') === 'next'"
+                [class.range-selected]="inDeployGroup(unit.id)"
+                [class.next-deploy]="isNextDeploy(unit.id)"
                 draggable="true"
                 (dragstart)="onUnitDragStart($event, unit.id)"
                 (dragend)="onUnitDragEnd()"
@@ -387,6 +389,8 @@
         [class.zoomed]="isMapZoomed()"
         [class.placing-entrenchment]="awaitingEntrenchment"
         [style.grid-template-columns]="'var(--axis-w) repeat(' + visibleColumns().length + ', var(--cell-w))'"
+        (mousedown)="keepShiftClickFromSelectingText($event)"
+        (mouseleave)="onDeployPreviewLeave()"
       >
         <div class="axis corner"></div>
         @for (column of visibleColumns(); track column) {
@@ -406,6 +410,7 @@
               [class.deployment]="inSelectedSetup(cell.x, cell.y)"
               [class.strategic]="onStrategicPoint(cell.x, cell.y)"
               [class.entrenched]="hasEntrenchment(cell.x, cell.y)"
+              (mouseenter)="onDeployPreviewMove($event, cell.x, cell.y)"
               (dragover)="onCellDragOver($event)"
               (drop)="onCellDrop($event, cell.x, cell.y)"
               (click)="onCellClick($event, cell.x, cell.y)"
@@ -427,6 +432,7 @@
                         [class.troop-artillery]="troopFamily(occupant.unit, chipArmyName(occupant.kind)) === 'artillery'"
                         [class.armed]="chipHighlight(occupant.unit.id, occupant.kind) === 'current'"
                         [class.next-paint]="chipHighlight(occupant.unit.id, occupant.kind) === 'next'"
+                        [class.last-placed]="isLastPlaced(occupant.unit.id)"
                         [attr.draggable]="occupant.kind === 'own' && chipDragEnabled(occupant.unit)"
                         (click)="onChipClick($event, occupant.unit.id, occupant.kind)"
                         (contextmenu)="onChipContextMenu($event, occupant.unit.id, occupant.kind)"

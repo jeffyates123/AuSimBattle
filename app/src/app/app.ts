@@ -929,6 +929,10 @@ export class App {
     return this.getPlacementLimit() ?? 0;
   }
 
+  protected getAvailableCount(): number {
+    return this.selectedArmy?.units.length ?? 0;
+  }
+
   protected getArmyLabel(side: ArmySide): string {
     const army = this.parsedTurn?.armies.find((item) => item.side === side);
     return army?.name ?? 'Unknown';
@@ -2487,7 +2491,7 @@ export class App {
     this.deployGroup = ids;
     this.selectFederation(ids[0], 'own');
     this.armedFederationId = ids[0];
-    this.statusMessage = `${ids.length} units selected, shift-click the beginning and end of the area to deploy to.`;
+    this.statusMessage = `${ids.length} units selected, click the beginning of the area, then shift-click the other corner to deploy.`;
   }
 
   private unplacedIdsBetween(startId: number, endId: number): number[] {
@@ -2504,30 +2508,27 @@ export class App {
     if (!group?.length) {
       return;
     }
-    const inside = this.inSelectedSetup(x, y);
-    if (!event.shiftKey) {
-      if (!inside) {
-        this.clearDeploySelection();
-        this.statusMessage = 'Selection cleared.';
-        return;
-      }
-      const first = group[0];
+    if (!this.inSelectedSetup(x, y)) {
+      const started = this.deployAreaAnchor !== null;
       this.clearDeploySelection();
-      this.selectFederation(first, 'own');
-      this.armedFederationId = first;
-      this.placeFederation(first, x, y);
-      return;
-    }
-    if (!inside) {
-      this.clearDeploySelection();
-      this.statusMessage = 'Selection cleared. Both shift-clicks must be inside the deployment area.';
+      this.statusMessage = event.shiftKey && started
+        ? 'Selection cleared. Both shift-clicks must be inside the deployment area.'
+        : 'Selection cleared.';
       return;
     }
     if (!this.deployAreaAnchor) {
       this.deployAreaAnchor = { x, y };
       this.deployPointer = { x, y };
-      this.deployAreaHover = { x, y };
-      this.statusMessage = `${group.length} units selected, shift-click the other corner of the area to deploy to.`;
+      this.deployAreaHover = event.shiftKey ? { x, y } : null;
+      this.statusMessage = `${group.length} units selected, shift-click the other corner to deploy the group, or click to place the next federation.`;
+      return;
+    }
+    if (!event.shiftKey) {
+      const first = group[0];
+      this.clearDeploySelection();
+      this.selectFederation(first, 'own');
+      this.armedFederationId = first;
+      this.placeFederation(first, x, y);
       return;
     }
     const start = this.deployAreaAnchor;
@@ -2650,7 +2651,7 @@ export class App {
         const reason = this.statusMessage || 'Could not place the next federation.';
         this.selectFederation(group[0], 'own');
         this.armedFederationId = group[0];
-        this.statusMessage = `${reason} ${group.length} fed selected, shift-click the beginning and end of the area to deploy to.`;
+        this.statusMessage = `${reason} ${group.length} fed selected, click the beginning of the area, then shift-click the other corner to deploy.`;
         return;
       }
       group.shift();
@@ -2665,8 +2666,8 @@ export class App {
     this.selectFederation(group[0], 'own');
     this.armedFederationId = group[0];
     this.statusMessage = placed
-      ? `${group.length} fed selected, shift-click the beginning and end of the area to deploy to.`
-      : `No empty squares in that area. ${group.length} fed selected, shift-click the beginning and end of the area to deploy to.`;
+      ? `${group.length} fed selected, click the beginning of the area, then shift-click the other corner to deploy.`
+      : `No empty squares in that area. ${group.length} fed selected, click the beginning of the area, then shift-click the other corner to deploy.`;
   }
 
   private deploymentCells(
@@ -2968,12 +2969,12 @@ export class App {
   private fortressRoleCache: Map<string, { role: 'wall' | 'interior'; zone: string }> | null = null;
 
   private fortressPlacementRejection(unitId: number, x: number, y: number): string | null {
-    const role = this.fortressRoles().get(this.coordKey(x, y));
-    if (!role) {
+    if (!this.parsedTurn?.battleBrief.fortress) {
       return null;
     }
-    if (role.role === 'wall') {
-      return 'Drop rejected: a federation cannot deploy on a fortress wall.';
+    const role = this.fortressRoles().get(this.coordKey(x, y));
+    if (!role || !this.fortressZoneHasInterior(role.zone)) {
+      return null;
     }
     const occupant = this.ownByCoord.get(this.coordKey(x, y));
     const others = this.fortressHolders(role.zone).filter((holder) => !(holder.kind === 'own' && holder.id === unitId));
@@ -2986,10 +2987,20 @@ export class App {
     return 'Drop rejected: the fortress already holds a federation.';
   }
 
+  private fortressZoneHasInterior(zone: string): boolean {
+    let found = false;
+    this.fortressRoles().forEach((role) => {
+      if (role.zone === zone && role.role === 'interior') {
+        found = true;
+      }
+    });
+    return found;
+  }
+
   private fortressHolders(zone: string): Array<{ id: number; kind: 'own' | 'enemy' }> {
     const holders: Array<{ id: number; kind: 'own' | 'enemy' }> = [];
     this.fortressRoles().forEach((role, key) => {
-      if (role.role !== 'interior' || role.zone !== zone) {
+      if (role.zone !== zone) {
         return;
       }
       const own = this.ownByCoord.get(key);

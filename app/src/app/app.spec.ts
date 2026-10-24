@@ -701,7 +701,7 @@ describe('App', () => {
     const selected = ids.slice(0, 6);
     selectRange(selected[0], selected[5]);
     expect(app.statusMessage).toBe(
-      '6 units selected, shift-click the beginning and end of the area to deploy to.',
+      '6 units selected, click the beginning of the area, then shift-click the other corner to deploy.',
     );
     expect(selected.every((id) => app.inDeployGroup(id))).toBe(true);
     expect(app.inDeployGroup(ids[6])).toBe(false);
@@ -737,6 +737,9 @@ describe('App', () => {
 
     selectRange(selected[0], selected[5]);
     app.onCellClick(click, zone.minX, zone.maxY);
+    expect(app.isDeployAnchor(zone.minX, zone.maxY)).toBe(true);
+    expect(app.placements.has(selected[0])).toBe(false);
+    app.onCellClick(click, zone.minX, zone.maxY);
     expect(app.placements.get(selected[0])).toEqual({ x: zone.minX, y: zone.maxY });
     expect(app.placements.has(selected[1])).toBe(false);
     expect(app.inDeployGroup(selected[1])).toBe(false);
@@ -754,7 +757,7 @@ describe('App', () => {
     expect(app.placements.get(rest[1])).toEqual({ x: rowX + 1, y: rowY });
     expect(app.placements.get(rest[2])).toEqual({ x: rowX + 2, y: rowY });
     expect(app.placements.has(rest[3])).toBe(false);
-    expect(app.statusMessage).toBe('3 fed selected, shift-click the beginning and end of the area to deploy to.');
+    expect(app.statusMessage).toBe('3 fed selected, click the beginning of the area, then shift-click the other corner to deploy.');
 
     const box = unplaced().slice(0, 6);
     selectRange(box[5], box[0]);
@@ -776,15 +779,16 @@ describe('App', () => {
     expect(app.placements.get(box[2])).toEqual({ x: boxX, y: boxY + 1 });
     expect(app.placements.get(box[3])).toEqual({ x: boxX + 1, y: boxY + 1 });
     expect(app.placements.has(box[4])).toBe(false);
-    expect(app.statusMessage).toBe('2 fed selected, shift-click the beginning and end of the area to deploy to.');
+    expect(app.statusMessage).toBe('2 fed selected, click the beginning of the area, then shift-click the other corner to deploy.');
   });
 
-  it('rejects a fortress wall and allows only one federation inside', async () => {
+  it('allows one federation inside the fortress walls', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance as unknown as {
       onTurnFileSelected(event: Event): Promise<void>;
       onArmySelected(army: string): void;
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void;
       onCellClick(event: MouseEvent, x: number, y: number): void;
       getUnplacedUnits(): Array<{ id: number }>;
       selectedArmySide: 'A' | 'B';
@@ -800,27 +804,34 @@ describe('App', () => {
 
     app.onPaletteUnitClick(click, first.id);
     app.onCellClick(click, 20, 1);
-    expect(app.statusMessage).toBe('Drop rejected: a federation cannot deploy on a fortress wall.');
-    expect(app.placements.has(first.id)).toBe(false);
-
-    app.onCellClick(click, 22, 4);
-    expect(app.statusMessage).toBe('Drop rejected: a federation cannot deploy on a fortress wall.');
-    expect(app.placements.has(first.id)).toBe(false);
-
-    app.onCellClick(click, 22, 2);
-    expect(app.placements.get(first.id)).toEqual({ x: 22, y: 2 });
+    expect(app.placements.get(first.id)).toEqual({ x: 20, y: 1 });
 
     app.onPaletteUnitClick(click, second.id);
-    app.onCellClick(click, 24, 3);
+    app.onCellClick(click, 22, 4);
     expect(app.statusMessage).toBe('Drop rejected: the fortress already holds a federation.');
     expect(app.placements.has(second.id)).toBe(false);
+
+    app.onCellClick(click, 22, 2);
+    expect(app.statusMessage).toBe('Drop rejected: the fortress already holds a federation.');
+    expect(app.placements.has(second.id)).toBe(false);
+
+    app.onChipClick(new MouseEvent('click', { detail: 2 }), first.id, 'own');
+    expect(app.placements.has(first.id)).toBe(false);
+    app.onPaletteUnitClick(click, second.id);
+    app.onCellClick(click, 22, 2);
+    expect(app.placements.get(second.id)).toEqual({ x: 22, y: 2 });
+
+    app.onPaletteUnitClick(click, first.id);
+    app.onCellClick(click, 24, 3);
+    expect(app.statusMessage).toBe('Drop rejected: the fortress already holds a federation.');
+    expect(app.placements.has(first.id)).toBe(false);
 
     app.onPaletteUnitClick(click, third.id);
     app.onCellClick(click, 23, 5);
     expect(app.placements.get(third.id)).toEqual({ x: 23, y: 5 });
   });
 
-  it('marks the next deploy federation in white and the last placed federation in pink', async () => {
+  it('marks the next deploy federation in white and the last placed federation in red', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance as unknown as {
       onTurnFileSelected(event: Event): Promise<void>;

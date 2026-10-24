@@ -676,8 +676,8 @@ span.chip-mode-value {
 .unit-card.last-placed.next-paint,
 .unit-card.last-placed.next-paint.army-a-chip,
 .unit-card.last-placed.next-paint.army-b-chip {
-  border: 3px solid #ff4fd8;
-  box-shadow: inset 0 0 0 3px #ff4fd8;
+  border: 3px solid #ff1744;
+  box-shadow: inset 0 0 0 3px #ff1744;
   z-index: 6;
 }
 

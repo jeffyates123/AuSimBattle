@@ -216,15 +216,15 @@
               (click)="sheetView = 'deploy'"
             >Deploy</button>
             @if (selectedArmy && parsedTurn.armies.length) {
-              <span class="placed-count">Placed {{ getPlacedCount() }} / {{ getTotalCount() }} federations</span>
+              <span class="placed-count">Placed {{ getPlacedCount() }}/{{ getTotalCount() }} ({{ getAvailableCount() }} available feds)</span>
             }
           </div>
           @if (selectedArmy && parsedTurn.armies.length) {
             <button
               type="button"
               class="info-tip"
-              title="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence. Click a federation, then Shift-click another to select the range. Shift-click one corner in the deployment area, and the rectangle follows the pointer while Shift is held. Shift-click the other corner to place them."
-              aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence. Click a federation, then Shift-click another to select the range. Shift-click one corner in the deployment area, and the rectangle follows the pointer while Shift is held. Shift-click the other corner to place them."
+              title="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence. Click a federation, then Shift-click another to select the range. Click a deployment square to mark the start. While Shift is held, a white rectangle follows the pointer. Shift-click the other corner to place the group, or click to place the next federation."
+              aria-label="Drag federation chips onto your setup zone on The Battle field map. Right-click a federation for its settings. Double-click a deployed federation to remove it. Click a federation, then click the map to place it. Each subsequent click places the next federation in sequence. Click a federation, then Shift-click another to select the range. Click a deployment square to mark the start. While Shift is held, a white rectangle follows the pointer. Shift-click the other corner to place the group, or click to place the next federation."
             >i</button>
           }
           @if (selectedArmy && parsedTurn.armies.length) {

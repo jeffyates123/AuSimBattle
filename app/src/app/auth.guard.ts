@@ -1,8 +1,12 @@
 import { inject } from '@angular/core';
 import { CanMatchFn, Router } from '@angular/router';
-import { AuthService } from './services/auth.service';
+import { AuthService, signInDisabled } from './services/auth.service';
 
 export const authGuard: CanMatchFn = async () => {
+  if (signInDisabled) {
+    await inject(AuthService).ensureSession();
+    return true;
+  }
   const auth = inject(AuthService);
   const router = inject(Router);
   const user = await auth.ensureSession();
@@ -10,6 +14,10 @@ export const authGuard: CanMatchFn = async () => {
 };
 
 export const adminGuard: CanMatchFn = async () => {
+  if (signInDisabled) {
+    await inject(AuthService).ensureSession();
+    return true;
+  }
   const auth = inject(AuthService);
   const router = inject(Router);
   const user = await auth.ensureSession();
@@ -20,8 +28,11 @@ export const adminGuard: CanMatchFn = async () => {
 };
 
 export const loginGuard: CanMatchFn = async () => {
-  const auth = inject(AuthService);
   const router = inject(Router);
+  if (signInDisabled) {
+    return router.parseUrl('/planner');
+  }
+  const auth = inject(AuthService);
   const user = await auth.ensureSession();
   if (!user) {
     return true;

@@ -63,7 +63,7 @@ describe('App', () => {
       onPaletteUnitClick(event: MouseEvent, unitId: number): void;
       changeValue(): void;
       onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own'): void;
-      chipModeMenu: { unitId: number } | null;
+      chipModeMenu: { unitId: number; group?: boolean } | null;
       confirmValueEntry(event: Event): void;
       keepEnteredValue(): void;
       paintValueToAll(): void;
@@ -95,7 +95,7 @@ describe('App', () => {
     expect(app.selectedArmy!.units.every((unit) => app.chipText(unit) === '0')).toBe(true);
 
     app.onChipContextMenu(new MouseEvent('contextmenu'), 1, 'own');
-    expect(app.chipModeMenu).toEqual({ unitId: 1 });
+    expect(app.chipModeMenu).toEqual(expect.objectContaining({ unitId: 1 }));
     expect(app.chipText(first)).toBe('0');
     app.chipModeMenu = null;
 
@@ -524,7 +524,7 @@ describe('App', () => {
       onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void;
       onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void;
       chooseChipModeMenu(mode: 'order' | 'fedNo'): void;
-      chipModeMenu: { unitId: number } | null;
+      chipModeMenu: { unitId: number; group?: boolean } | null;
       chipSettingModes: Array<{ value: string }>;
       chipDisplayMode: string;
       valueEntry: { unitId: number; mode: string } | null;
@@ -539,7 +539,7 @@ describe('App', () => {
     app.onChipContextMenu(new MouseEvent('contextmenu'), 9, 'own');
 
     expect(app.placements.has(9)).toBe(true);
-    expect(app.chipModeMenu).toEqual({ unitId: 9 });
+    expect(app.chipModeMenu).toEqual(expect.objectContaining({ unitId: 9 }));
     expect(app.chipSettingModes.map((mode) => mode.value)).toEqual([
       'startAttack',
       'order',
@@ -782,7 +782,141 @@ describe('App', () => {
     expect(app.statusMessage).toBe('2 fed selected, click the beginning of the area, then shift-click the other corner to deploy.');
   });
 
-  it('allows one federation inside the fortress walls', async () => {
+  it('drag-selects map federations and applies one setting to the whole selection', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      confirmClearAll(): void;
+      selectChipMode(mode: 'xy' | 'order'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void;
+      onCellMouseEnter(event: MouseEvent, x: number, y: number): void;
+      onDeployPreviewKey(event: KeyboardEvent): void;
+      cellShadow(cell: { x: number; y: number; token: string; feature: 'open'; height: number }): string;
+      inMapFederationGroup(unitId: number, kind: 'own' | 'enemy'): boolean;
+      onChipContextMenu(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void;
+      chooseChipModeMenu(mode: 'order'): void;
+      confirmValueEntry(event: Event): void;
+      chipModeMenu: { unitId: number; group?: boolean } | null;
+      valueEntry: { draft: string; mode: string; unitIds: number[] | null } | null;
+      valueAction: unknown;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      federationOrders: Map<number, FederationOrder>;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    app.confirmClearAll();
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    const shift = new MouseEvent('click', { shiftKey: true });
+    app.selectChipMode('xy');
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, zone.minX, zone.minY);
+    app.onPaletteUnitClick(click, 2);
+    app.onCellClick(click, zone.minX + 1, zone.minY);
+    app.onPaletteUnitClick(click, 3);
+    app.onCellClick(click, zone.minX + 2, zone.minY);
+
+    app.selectChipMode('order');
+    app.onChipClick(click, 1, 'own');
+    app.onCellMouseEnter({ shiftKey: true } as unknown as MouseEvent, zone.minX + 1, zone.minY);
+    app.onDeployPreviewKey(new KeyboardEvent('keydown', { key: 'Shift' }));
+    const plain = (x: number, y: number) => ({ x, y, token: '.', feature: 'open' as const, height: 1 });
+    expect(app.cellShadow(plain(zone.minX, zone.minY))).toContain('inset 0 3px 0 #fff');
+    app.onCellClick(shift, zone.minX + 1, zone.minY);
+    expect(app.inMapFederationGroup(1, 'own')).toBe(true);
+    expect(app.inMapFederationGroup(2, 'own')).toBe(true);
+    expect(app.inMapFederationGroup(3, 'own')).toBe(false);
+
+    app.onChipContextMenu(new MouseEvent('contextmenu'), 1, 'own');
+    expect(app.chipModeMenu).toEqual(expect.objectContaining({ unitId: 1, group: true }));
+    app.chooseChipModeMenu('order');
+    expect(app.valueEntry).toEqual(expect.objectContaining({ mode: 'order', unitIds: [1, 2] }));
+    app.valueEntry!.draft = '11';
+    app.confirmValueEntry(new Event('submit'));
+    expect(app.valueAction).toBeNull();
+    expect(app.federationOrders.get(1)?.primary.order).toBe(11);
+    expect(app.federationOrders.get(2)?.primary.order).toBe(11);
+    expect(app.federationOrders.get(3)?.primary.order).toBe(0);
+  });
+
+  it('deploys a drag-selected group in XY and destination modes and clears outside actions', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance as unknown as {
+      onTurnFileSelected(event: Event): Promise<void>;
+      confirmClearAll(): void;
+      selectChipMode(mode: 'xy' | 'destination1' | 'order'): void;
+      onPaletteUnitClick(event: MouseEvent, unitId: number): void;
+      onCellClick(event: MouseEvent, x: number, y: number): void;
+      onChipClick(event: MouseEvent, unitId: number, kind: 'own' | 'enemy'): void;
+      cancelEntrenchmentOnClickElsewhere(event: MouseEvent): void;
+      inMapFederationGroup(unitId: number, kind: 'own' | 'enemy'): boolean;
+      setupZones: { A: { minX: number; minY: number }; B: { minX: number; minY: number } };
+      selectedArmySide: 'A' | 'B';
+      placements: Map<number, { x: number; y: number }>;
+      federationOrders: Map<number, FederationOrder>;
+      statusMessage: string;
+    };
+    const body = readFileSync(resolve(process.cwd(), '../124D0113.txt'), 'utf8');
+    const file = new File([body], '124D0113.txt', { type: 'text/plain' });
+    await app.onTurnFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    app.confirmClearAll();
+    const zone = app.setupZones[app.selectedArmySide];
+    const click = new MouseEvent('click');
+    const shift = new MouseEvent('click', { shiftKey: true });
+    app.selectChipMode('xy');
+    app.onPaletteUnitClick(click, 1);
+    app.onCellClick(click, zone.minX, zone.minY);
+    app.onPaletteUnitClick(click, 2);
+    app.onCellClick(click, zone.minX + 1, zone.minY);
+    app.onPaletteUnitClick(click, 3);
+    app.onCellClick(click, zone.minX + 2, zone.minY);
+
+    app.selectChipMode('order');
+    app.onChipClick(click, 1, 'own');
+    app.onCellClick(shift, zone.minX + 2, zone.minY);
+    app.onCellClick(click, zone.minX + 5, zone.minY + 1);
+    app.onCellClick(shift, zone.minX + 6, zone.minY + 2);
+    expect(app.placements.get(1)).toEqual({ x: zone.minX + 5, y: zone.minY + 1 });
+    expect(app.placements.get(2)).toEqual({ x: zone.minX + 6, y: zone.minY + 1 });
+    expect(app.placements.get(3)).toEqual({ x: zone.minX + 5, y: zone.minY + 2 });
+
+    app.onChipClick(click, 1, 'own');
+    app.onCellClick(shift, zone.minX + 6, zone.minY + 2);
+    app.onCellClick(click, 1, 20);
+    expect(app.statusMessage).toContain('This is not allowed.');
+    expect(app.statusMessage).toContain('setup area');
+    expect(app.placements.get(1)).toEqual({ x: zone.minX + 5, y: zone.minY + 1 });
+    expect(app.inMapFederationGroup(1, 'own')).toBe(true);
+    app.cancelEntrenchmentOnClickElsewhere(new MouseEvent('click'));
+
+    app.onChipClick(click, 1, 'own');
+    app.onCellClick(shift, zone.minX + 6, zone.minY + 2);
+    app.selectChipMode('destination1');
+    app.onCellClick(click, 3, 18);
+    app.onCellClick(shift, 4, 18);
+    expect(app.federationOrders.get(1)?.primary.destination1).toEqual({ x: 3, y: 18 });
+    expect(app.federationOrders.get(2)?.primary.destination1).toEqual({ x: 4, y: 18 });
+    expect(app.federationOrders.get(3)?.primary.destination1).toEqual({ x: null, y: null });
+    expect(app.statusMessage).toBe('1 fed selected, click the beginning of the area, then shift-click the other corner to deploy.');
+
+    app.cancelEntrenchmentOnClickElsewhere(new MouseEvent('click'));
+    expect(app.statusMessage).toBe('Selection cleared.');
+    expect(app.inMapFederationGroup(1, 'own')).toBe(false);
+
+    app.selectChipMode('xy');
+
+    app.onChipClick(click, 1, 'own');
+    app.onCellClick(shift, zone.minX + 6, zone.minY + 2);
+    app.selectChipMode('order');
+    expect(app.statusMessage).toBe('Selection cleared.');
+    expect(app.inMapFederationGroup(2, 'own')).toBe(false);
+  });
+
+  it('allows one federation inside the fortress and none on the wall', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance as unknown as {
       onTurnFileSelected(event: Event): Promise<void>;
@@ -804,25 +938,31 @@ describe('App', () => {
 
     app.onPaletteUnitClick(click, first.id);
     app.onCellClick(click, 20, 1);
-    expect(app.placements.get(first.id)).toEqual({ x: 20, y: 1 });
+    expect(app.statusMessage).toBe('Drop rejected: a federation cannot be placed on a fortress wall.');
+    expect(app.placements.has(first.id)).toBe(false);
+
+    app.onCellClick(click, 22, 2);
+    expect(app.placements.get(first.id)).toEqual({ x: 22, y: 2 });
 
     app.onPaletteUnitClick(click, second.id);
-    app.onCellClick(click, 22, 4);
+    app.onCellClick(click, 24, 3);
     expect(app.statusMessage).toBe('Drop rejected: the fortress already holds a federation.');
     expect(app.placements.has(second.id)).toBe(false);
 
-    app.onCellClick(click, 22, 2);
-    expect(app.statusMessage).toBe('Drop rejected: the fortress already holds a federation.');
+    app.onCellClick(click, 22, 4);
+    expect(app.statusMessage).toBe('Drop rejected: a federation cannot be placed on a fortress wall.');
     expect(app.placements.has(second.id)).toBe(false);
 
     app.onChipClick(new MouseEvent('click', { detail: 2 }), first.id, 'own');
     expect(app.placements.has(first.id)).toBe(false);
     app.onPaletteUnitClick(click, second.id);
-    app.onCellClick(click, 22, 2);
-    expect(app.placements.get(second.id)).toEqual({ x: 22, y: 2 });
+    app.onCellClick(click, 22, 4);
+    expect(app.placements.has(second.id)).toBe(false);
+    app.onCellClick(click, 23, 3);
+    expect(app.placements.get(second.id)).toEqual({ x: 23, y: 3 });
 
     app.onPaletteUnitClick(click, first.id);
-    app.onCellClick(click, 24, 3);
+    app.onCellClick(click, 22, 1);
     expect(app.statusMessage).toBe('Drop rejected: the fortress already holds a federation.');
     expect(app.placements.has(first.id)).toBe(false);
 

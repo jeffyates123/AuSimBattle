@@ -21,6 +21,7 @@ import { RulesService } from './services/rules.service';
 import { ReplayHandoffService } from './services/replay-handoff.service';
 import { ReplayParserService } from './services/replay-parser.service';
 import { TurnParserService } from './services/turn-parser.service';
+import { isPdfTurn, readTurnFile, saveTurnTextFile } from './services/pdf-turn';
 import { turnArchiveName } from './services/turn-archive-name';
 
 type ChipLabelMode =
@@ -92,9 +93,17 @@ export class App {
   protected chipDisplayMode: (typeof this.chipDisplayModes)[number]['value'] = 'fedType';
   protected chipLabelMode: ChipLabelMode = 'fedType';
   protected showFedEffectiveness = false;
-  protected valueEntry: { unitId: number; mode: EditableChipMode; draft: string; error: string; hint: string; fresh: boolean } | null = null;
+  protected valueEntry: {
+    unitId: number;
+    mode: EditableChipMode;
+    draft: string;
+    error: string;
+    hint: string;
+    fresh: boolean;
+    unitIds: number[] | null;
+  } | null = null;
   protected valueAction: { unitId: number; mode: EditableChipMode; value: number; fresh?: boolean } | null = null;
-  protected chipModeMenu: { unitId: number } | null = null;
+  protected chipModeMenu: { unitId: number; group?: boolean } | null = null;
   protected coordinateClearMenu: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' | null = null;
   protected readonly chipSettingModes = this.chipDisplayModes.filter(
     (mode) =>
@@ -167,6 +176,13 @@ export class App {
   private deployAreaAnchor: { x: number; y: number } | null = null;
   private deployAreaHover: { x: number; y: number } | null = null;
   private deployPointer: { x: number; y: number } | null = null;
+  private selectedMapFederations: number[] = [];
+  private mapDeployAnchor: { x: number; y: number } | null = null;
+  private mapDeployHover: { x: number; y: number } | null = null;
+  private mapDeployPointer: { x: number; y: number } | null = null;
+  private mapSelectAnchor: { x: number; y: number } | null = null;
+  private mapSelectPointer: { x: number; y: number } | null = null;
+  private mapSelectHover: { x: number; y: number } | null = null;
   private sheetFedNo = new Map<number, number>();
   private layoutRevision = 0;
   private readonly chipPositionOverride = new Map<number, Coordinate>();
@@ -244,23 +260,28 @@ export class App {
     this.changeDetector.markForCheck();
 
     try {
-      const text = await file.text();
+      const uploaded = await readTurnFile(file);
+      if (isPdfTurn(file)) {
+        saveTurnTextFile(uploaded.fileName, uploaded.text);
+      }
+      const text = uploaded.text;
+      const fileName = uploaded.fileName;
       const kinds = this.turnFileKinds(text);
       if (kinds.setup && kinds.results) {
         this.pendingTurnText = text;
-        this.pendingTurnName = file.name;
+        this.pendingTurnName = fileName;
         this.fileKindChoice = true;
         return;
       }
       if (kinds.results) {
-        await this.openResultsReplay(text, null, file.name);
+        await this.openResultsReplay(text, null, fileName);
         return;
       }
       if (!kinds.setup) {
         this.parseError = 'That file has neither a sim setup nor a sim result.';
         return;
       }
-      await this.loadSetupFile(text, file.name);
+      await this.loadSetupFile(text, fileName);
     } catch (error) {
       this.parseError = error instanceof Error ? error.message : 'Unable to parse this turn file.';
       this.parsedTurn = null;
@@ -334,6 +355,9 @@ export class App {
     this.heldPosition.clear();
     this.highlightedFederationId = null;
     this.clearDeploySelection();
+    this.selectedMapFederations = [];
+    this.clearMapDeployAreaMark();
+    this.clearMapSelectMark();
     this.fortressEntrenchments = this.emptyFortressEntrenchments();
     this.awaitingEntrenchment = false;
 
@@ -379,6 +403,8 @@ export class App {
     if (performance.now() - this.lastPaletteDragAt < 400) {
       return;
     }
+    this.clearMapFederationSelection();
+    this.clearMapSelectMark();
     this.clearDeploySelection();
     if (this.beginValueEdit(unitId, event.detail)) {
       return;
@@ -389,6 +415,10 @@ export class App {
 
   protected inDeployGroup(unitId: number): boolean {
     return this.deployRangeAnchor === unitId || (this.deployGroup?.includes(unitId) ?? false);
+  }
+
+  protected inMapFederationGroup(unitId: number, kind: 'own' | 'enemy'): boolean {
+    return kind === 'own' && this.selectedMapFederations.includes(unitId);
   }
 
   protected isNextDeploy(unitId: number): boolean {
@@ -429,13 +459,33 @@ export class App {
       }
       return;
     }
-    if (this.deployRangeAnchor !== null) {
-      this.deployRangeAnchor = null;
+    const unit = this.federationUnit(unitId, kind);
+    const coord = unit && kind === 'own' ? this.displayedOwnCoordinate(unit) : null;
+    if (this.selectedMapFederations.length) {
+      if (coord) {
+        this.onMapFederationDeployClick(event, coord.x, coord.y);
+      } else {
+        this.clearMapFederationSelection();
+        this.statusMessage = 'Selection cleared.';
+      }
+      return;
     }
     if (kind === 'own' && event.detail >= 2) {
+      this.clearMapSelectMark();
       this.closeUnitMenus();
       this.returnToPool(unitId);
       return;
+    }
+    if (kind === 'own' && coord && event.shiftKey && this.mapSelectAnchor) {
+      this.finishMapFederationSelection(coord);
+      return;
+    }
+    if (kind === 'own' && coord) {
+      this.beginMapFederationSelection(coord, unitId, event.shiftKey);
+      return;
+    }
+    if (this.deployRangeAnchor !== null) {
+      this.deployRangeAnchor = null;
     }
     if (kind === 'own' && this.beginValueEdit(unitId, event.detail)) {
       return;
@@ -447,23 +497,41 @@ export class App {
   }
 
   protected chooseChipModeMenu(mode: (typeof this.chipDisplayModes)[number]['value']): void {
-    const unitId = this.chipModeMenu?.unitId;
-    this.chipModeMenu = null;
-    if (!unitId) {
+    const menu = this.chipModeMenu;
+    const unitId = menu?.unitId;
+    if (!unitId || !menu) {
+      this.chipModeMenu = null;
       return;
     }
+    if (menu.group && this.selectedMapFederations.length > 1) {
+      const groupIds = [...this.selectedMapFederations];
+      this.chipModeMenu = null;
+      this.selectedMapFederations = [];
+      this.selectChipMode(mode);
+      this.selectedMapFederations = groupIds;
+      const editable = this.editableChipMode();
+      if (!editable) {
+        this.statusMessage = 'Choose an editable setting for the selected federations.';
+        return;
+      }
+      this.selectFederation(this.selectedMapFederations[0], 'own');
+      this.armedFederationId = this.selectedMapFederations[0];
+      this.openValueEntry(this.selectedMapFederations[0], editable, '', true, this.selectedMapFederations);
+      return;
+    }
+    this.chipModeMenu = null;
     this.selectChipMode(mode);
     this.selectFederation(unitId, 'own');
     this.armedFederationId = unitId;
     this.beginValueEdit(unitId, 1);
   }
 
-  private openChipModeMenu(unitId: number): void {
+  private openChipModeMenu(unitId: number, group = false): void {
     this.valueEntry = null;
     this.valueAction = null;
     this.selectFederation(unitId, 'own');
     this.armedFederationId = unitId;
-    this.chipModeMenu = { unitId };
+    this.chipModeMenu = group ? { unitId, group: true } : { unitId };
   }
 
   private closeUnitMenus(): void {
@@ -507,10 +575,21 @@ export class App {
     if (kind !== 'own') {
       return;
     }
+    const inGroup = this.selectedMapFederations.includes(unitId);
+    if (this.selectedMapFederations.length > 1 && inGroup) {
+      this.openChipModeMenu(unitId, true);
+      return;
+    }
+    if (!inGroup) {
+      this.clearMapFederationSelection();
+    }
     this.openChipModeMenu(unitId);
   }
 
   protected boardRemovalLabel(): string | null {
+    if (this.chipModeMenu?.group) {
+      return null;
+    }
     const unitId = this.chipModeMenu?.unitId;
     if (!unitId || !this.placements.has(unitId)) {
       return null;
@@ -752,6 +831,12 @@ export class App {
     window.getSelection()?.removeAllRanges();
   }
 
+  protected onCellMouseEnter(event: MouseEvent, x: number, y: number): void {
+    this.onDeployPreviewMove(event, x, y);
+    this.onMapDeployPreviewMove(event, x, y);
+    this.onMapSelectPreviewMove(event, x, y);
+  }
+
   protected onCellDragOver(event: DragEvent): void {
     event.preventDefault();
     if (event.dataTransfer) {
@@ -806,6 +891,17 @@ export class App {
       this.onDeployAreaClick(event, x, y);
       return;
     }
+    if (this.selectedMapFederations.length) {
+      this.onMapFederationDeployClick(event, x, y);
+      return;
+    }
+    if (this.mapSelectAnchor && event.shiftKey) {
+      this.finishMapFederationSelection({ x, y });
+      return;
+    }
+    if (this.mapSelectAnchor) {
+      this.clearMapSelectMark();
+    }
     if (this.deployRangeAnchor !== null) {
       this.deployRangeAnchor = null;
     }
@@ -822,6 +918,7 @@ export class App {
       return;
     }
     if (!this.coordinateMoveEnabled() && !this.armedUnitNeedsPlacement()) {
+      this.clearMapFederationSelection();
       return;
     }
     if (this.highlightedFederationId === null) {
@@ -867,13 +964,31 @@ export class App {
   @HostListener('document:click', ['$event'])
   protected cancelEntrenchmentOnClickElsewhere(event: MouseEvent): void {
     if (!this.awaitingEntrenchment) {
+      this.clearMapSelectionOnOutsideClick(event);
       return;
     }
     const target = event.target as HTMLElement | null;
     if (target?.closest('.cell.deployment')) {
+      this.clearMapSelectionOnOutsideClick(event);
       return;
     }
     this.awaitingEntrenchment = false;
+    this.clearMapSelectionOnOutsideClick(event);
+  }
+
+  private clearMapSelectionOnOutsideClick(event: MouseEvent): void {
+    if (!this.selectedMapFederations.length) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.cell') || target?.closest('.unit-card') || target?.closest('.warning-dialog')) {
+      return;
+    }
+    if (target?.closest('.chip-display-picker')) {
+      return;
+    }
+    this.clearMapFederationSelection();
+    this.statusMessage = 'Selection cleared.';
   }
 
   protected clearEntrenchments(): void {
@@ -1572,7 +1687,12 @@ export class App {
   }
 
   protected cellShadow(cell: MapCell): string {
-    return [this.specialBorderShadow(cell), this.deployBoxShadow(cell.x, cell.y)].filter(Boolean).join(', ');
+    return [
+      this.specialBorderShadow(cell),
+      this.deployBoxShadow(cell.x, cell.y),
+      this.mapDeployBoxShadow(cell.x, cell.y),
+      this.mapSelectBoxShadow(cell.x, cell.y),
+    ].filter(Boolean).join(', ');
   }
 
   protected armyChoiceLabel(army: 'Army A' | 'Army B'): string {
@@ -1734,6 +1854,10 @@ export class App {
       mode !== 'altDestination1' &&
       mode !== 'altDestination2'
     ) {
+      if (this.selectedMapFederations.length) {
+        this.clearMapFederationSelection();
+        this.statusMessage = 'Selection cleared.';
+      }
       this.chipLabelMode = mode;
     }
     this.chipDisplayMode = mode;
@@ -1817,6 +1941,15 @@ export class App {
     }
     this.valueEntry = null;
     this.valuePaint = null;
+    if (entry.unitIds?.length) {
+      for (const id of entry.unitIds) {
+        this.writeField(id, entry.mode, parsed, false);
+      }
+      this.autoSaveDraft();
+      this.valueAction = null;
+      this.statusMessage = `Saved ${this.fieldLabel(entry.mode)} ${this.displayFieldValue(entry.mode, parsed)} on ${entry.unitIds.length} federations.`;
+      return;
+    }
     if (entry.fresh) {
       this.valueAction = { unitId: entry.unitId, mode: entry.mode, value: parsed, fresh: true };
       this.statusMessage = `Entered ${this.fieldLabel(entry.mode)} ${this.displayFieldValue(entry.mode, parsed)} on federation ${entry.unitId}.`;
@@ -2001,8 +2134,14 @@ export class App {
     return true;
   }
 
-  private openValueEntry(unitId: number, mode: EditableChipMode, draft: string, fresh: boolean): void {
-    this.valueEntry = { unitId, mode, draft, error: '', hint: this.fieldHint(mode), fresh };
+  private openValueEntry(
+    unitId: number,
+    mode: EditableChipMode,
+    draft: string,
+    fresh: boolean,
+    unitIds: number[] | null = null,
+  ): void {
+    this.valueEntry = { unitId, mode, draft, error: '', hint: this.fieldHint(mode), fresh, unitIds };
   }
 
   private editableChipMode(): EditableChipMode | null {
@@ -2292,6 +2431,7 @@ export class App {
     this.sheetFedNo.clear();
     this.highlightedFederationId = null;
     this.clearDeploySelection();
+    this.clearMapFederationSelection();
     this.rebuildOccupancyMaps();
     this.statusMessage = 'All federations moved back to tray and their orders were cleared.';
     this.autoSaveDraft();
@@ -2305,6 +2445,12 @@ export class App {
     this.releaseFederation(unitId);
     if (this.lastPlacedFederationId === unitId) {
       this.lastPlacedFederationId = null;
+    }
+    if (this.selectedMapFederations.includes(unitId)) {
+      this.selectedMapFederations = this.selectedMapFederations.filter((id) => id !== unitId);
+      if (!this.selectedMapFederations.length) {
+        this.clearMapDeployAreaMark();
+      }
     }
     this.rebuildOccupancyMaps();
     this.statusMessage = fedNo
@@ -2474,7 +2620,201 @@ export class App {
     return true;
   }
 
+  private selectMapFederationsInArea(start: { x: number; y: number }, end: { x: number; y: number }): void {
+    const units = this.selectedArmy?.units ?? [];
+    const minX = Math.min(start.x, end.x);
+    const maxX = Math.max(start.x, end.x);
+    const minY = Math.min(start.y, end.y);
+    const maxY = Math.max(start.y, end.y);
+    const picked = units
+      .map((unit) => ({ unit, coord: this.displayedOwnCoordinate(unit) }))
+      .filter((item): item is { unit: FederationUnit; coord: Coordinate } => !!item.coord)
+      .filter((item) => item.coord.x >= minX && item.coord.x <= maxX && item.coord.y >= minY && item.coord.y <= maxY)
+      .sort((left, right) => left.coord.y - right.coord.y || left.coord.x - right.coord.x || left.unit.id - right.unit.id)
+      .map((item) => item.unit.id);
+    this.selectedMapFederations = picked;
+    this.clearMapDeployAreaMark();
+    this.closeUnitMenus();
+    if (!picked.length) {
+      this.statusMessage = 'No federations in that area.';
+      return;
+    }
+    this.selectFederation(picked[0], 'own');
+    this.armedFederationId = picked[0];
+    const label = this.coordinateLabel(this.activeMapMoveMode());
+    this.statusMessage = `${picked.length} federations selected. Click a coordinate, then shift-click the other corner to set ${label}.`;
+  }
+
+  private beginMapFederationSelection(coord: Coordinate, unitId: number, shift: boolean): void {
+    this.clearDeploySelection();
+    this.mapSelectAnchor = { x: coord.x, y: coord.y };
+    this.mapSelectPointer = { x: coord.x, y: coord.y };
+    this.mapSelectHover = shift ? { x: coord.x, y: coord.y } : null;
+    this.selectFederation(unitId, 'own');
+    this.armedFederationId = unitId;
+    this.statusMessage = 'Shift-click the other corner to select the federations in the box.';
+    this.changeDetector.markForCheck();
+  }
+
+  private finishMapFederationSelection(end: Coordinate): void {
+    const start = this.mapSelectAnchor;
+    this.clearMapSelectMark();
+    if (!start) {
+      return;
+    }
+    this.clearDeploySelection();
+    this.clearMapDeployAreaMark();
+    this.selectMapFederationsInArea(start, end);
+  }
+
+  private activeMapMoveMode(): 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2' {
+    const mode = this.chipDisplayMode;
+    if (mode === 'xy' || this.isDestinationMode(mode)) {
+      return mode;
+    }
+    return 'xy';
+  }
+
+  private clearMapFederationSelection(): void {
+    if (!this.selectedMapFederations.length) {
+      return;
+    }
+    this.selectedMapFederations = [];
+    this.clearMapDeployAreaMark();
+    if (this.chipModeMenu?.group) {
+      this.chipModeMenu = null;
+    }
+  }
+
+  private onMapFederationDeployClick(event: MouseEvent, x: number, y: number): void {
+    const selected = [...this.selectedMapFederations];
+    if (!selected.length) {
+      return;
+    }
+    const mode = this.activeMapMoveMode();
+    const inside = mode === 'xy' ? this.inSelectedSetup(x, y) : this.onMap(x, y);
+    if (!inside) {
+      if (mode === 'xy') {
+        this.clearMapDeployAreaMark();
+        this.statusMessage = `This is not allowed. ${this.setupAreaMessage()}`;
+        return;
+      }
+      const started = this.mapDeployAnchor !== null;
+      this.clearMapFederationSelection();
+      this.statusMessage = event.shiftKey && started
+        ? 'Selection cleared. Both clicks must be inside the allowed area.'
+        : 'Selection cleared.';
+      return;
+    }
+    if (!this.mapDeployAnchor) {
+      this.mapDeployAnchor = { x, y };
+      this.mapDeployPointer = { x, y };
+      this.mapDeployHover = event.shiftKey ? { x, y } : null;
+      this.statusMessage = `${selected.length} federations selected, shift-click the other corner to deploy the group, or click to place the next federation.`;
+      return;
+    }
+    if (!event.shiftKey) {
+      const first = selected[0];
+      this.clearMapFederationSelection();
+      this.selectFederation(first, 'own');
+      this.armedFederationId = first;
+      if (mode === 'xy') {
+        this.placeFederation(first, x, y);
+      } else {
+        this.setDestination(first, mode, x, y);
+        this.statusMessage = `Set ${this.coordinateLabel(mode)} for federation ${first} to ${x}/${y}.`;
+      }
+      return;
+    }
+    const start = this.mapDeployAnchor;
+    this.clearMapDeployAreaMark();
+    this.placeMapFederationGroup(selected, start, { x, y }, mode);
+  }
+
+  private placeMapFederationGroup(
+    units: number[],
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    mode: 'xy' | 'destination1' | 'destination2' | 'altDestination1' | 'altDestination2',
+  ): void {
+    const cells = mode === 'xy' ? this.deploymentCells(start, end) : this.battlefieldCells(start, end);
+    let placed = 0;
+    const remaining: number[] = [];
+    const selected = new Set(units);
+    if (mode === 'xy') {
+      for (const unitId of units) {
+        const cell = cells.find((candidate) => {
+          if (this.enemyHasCoord(candidate.x, candidate.y)) {
+            return false;
+          }
+          const occupant = this.ownByCoord.get(this.coordKey(candidate.x, candidate.y));
+          if (occupant && !selected.has(occupant.id)) {
+            return false;
+          }
+          return !this.fortressPlacementRejection(unitId, candidate.x, candidate.y);
+        });
+        if (!cell) {
+          remaining.push(unitId);
+          continue;
+        }
+        cells.splice(cells.indexOf(cell), 1);
+        this.placements.set(unitId, { x: cell.x, y: cell.y });
+        this.syncSetupCoordinate(unitId, { x: cell.x, y: cell.y });
+        this.chipPositionOverride.delete(unitId);
+        placed += 1;
+      }
+      this.rebuildOccupancyMaps();
+    } else {
+      for (const unitId of units) {
+        const cell = cells.shift();
+        if (!cell) {
+          remaining.push(unitId);
+          continue;
+        }
+        this.writeCoordinate(unitId, mode, cell);
+        placed += 1;
+      }
+    }
+    if (!placed) {
+      this.selectedMapFederations = remaining.length ? remaining : [...units];
+      if (this.selectedMapFederations.length) {
+        this.selectFederation(this.selectedMapFederations[0], 'own');
+        this.armedFederationId = this.selectedMapFederations[0];
+      }
+      this.statusMessage = 'No valid squares in that area.';
+      return;
+    }
+    if (remaining.length) {
+      this.selectedMapFederations = remaining;
+      this.selectFederation(remaining[0], 'own');
+      this.armedFederationId = remaining[0];
+      this.statusMessage = `${remaining.length} fed selected, click the beginning of the area, then shift-click the other corner to deploy.`;
+      this.autoSaveDraft();
+      return;
+    }
+    this.clearMapFederationSelection();
+    this.autoSaveDraft();
+    this.statusMessage = `Placed ${placed} federations.`;
+  }
+
+  private battlefieldCells(start: { x: number; y: number }, end: { x: number; y: number }): Array<{ x: number; y: number }> {
+    const minX = Math.min(start.x, end.x);
+    const maxX = Math.max(start.x, end.x);
+    const minY = Math.min(start.y, end.y);
+    const maxY = Math.max(start.y, end.y);
+    const cells: Array<{ x: number; y: number }> = [];
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        if (this.onMap(x, y)) {
+          cells.push({ x, y });
+        }
+      }
+    }
+    return cells;
+  }
+
   private shiftSelectDeployUnit(unitId: number): void {
+    this.clearMapFederationSelection();
     if (!this.getUnplacedUnits().some((unit) => unit.id === unitId)) {
       return;
     }
@@ -2554,11 +2894,26 @@ export class App {
   }
 
   private deployBoxShadow(x: number, y: number): string {
-    const anchor = this.deployAreaAnchor;
-    if (!anchor || x < 1 || y < 1) {
+    return this.areaBoxShadow(this.deployAreaAnchor, this.deployAreaHover ?? this.deployAreaAnchor, x, y);
+  }
+
+  private mapDeployBoxShadow(x: number, y: number): string {
+    return this.areaBoxShadow(this.mapDeployAnchor, this.mapDeployHover ?? this.mapDeployAnchor, x, y);
+  }
+
+  private mapSelectBoxShadow(x: number, y: number): string {
+    return this.areaBoxShadow(this.mapSelectAnchor, this.mapSelectHover, x, y);
+  }
+
+  private areaBoxShadow(
+    anchor: { x: number; y: number } | null,
+    end: { x: number; y: number } | null,
+    x: number,
+    y: number,
+  ): string {
+    if (!anchor || !end || x < 1 || y < 1) {
       return '';
     }
-    const end = this.deployAreaHover ?? anchor;
     const minX = Math.min(anchor.x, end.x);
     const maxX = Math.max(anchor.x, end.x);
     const minY = Math.min(anchor.y, end.y);
@@ -2593,20 +2948,56 @@ export class App {
     this.setDeployPreview({ x, y }, event.shiftKey);
   }
 
+  protected onMapSelectPreviewMove(event: MouseEvent, x: number, y: number): void {
+    if (!this.mapSelectAnchor || this.selectedMapFederations.length) {
+      return;
+    }
+    if (!this.onMap(x, y)) {
+      this.setMapSelectPreview(null, event.shiftKey);
+      return;
+    }
+    this.setMapSelectPreview({ x, y }, event.shiftKey);
+  }
+
+  protected onMapDeployPreviewMove(event: MouseEvent, x: number, y: number): void {
+    if (!this.selectedMapFederations.length || !this.mapDeployAnchor) {
+      return;
+    }
+    const mode = this.activeMapMoveMode();
+    const inside = mode === 'xy' ? this.inSelectedSetup(x, y) : this.onMap(x, y);
+    if (!inside) {
+      this.setMapDeployPreview(null, event.shiftKey);
+      return;
+    }
+    this.setMapDeployPreview({ x, y }, event.shiftKey);
+  }
+
   protected onDeployPreviewLeave(): void {
     if (!this.deployAreaHover && !this.deployPointer) {
+      this.setMapDeployPreview(null, false);
+      this.setMapSelectPreview(null, false);
       return;
     }
     this.setDeployPreview(null, false);
+    this.setMapDeployPreview(null, false);
+    this.setMapSelectPreview(null, false);
   }
 
   @HostListener('document:keydown', ['$event'])
   @HostListener('document:keyup', ['$event'])
   protected onDeployPreviewKey(event: KeyboardEvent): void {
-    if (event.key !== 'Shift' || !this.deployAreaAnchor || !this.deployGroup?.length) {
+    if (event.key !== 'Shift') {
       return;
     }
-    this.setDeployPreview(this.deployPointer, event.type === 'keydown');
+    if (this.deployAreaAnchor && this.deployGroup?.length) {
+      this.setDeployPreview(this.deployPointer, event.type === 'keydown');
+    }
+    if (this.mapDeployAnchor && this.selectedMapFederations.length) {
+      this.setMapDeployPreview(this.mapDeployPointer, event.type === 'keydown');
+    }
+    if (this.mapSelectAnchor && !this.selectedMapFederations.length) {
+      this.setMapSelectPreview(this.mapSelectPointer, event.type === 'keydown');
+    }
   }
 
   private setDeployPreview(pointer: { x: number; y: number } | null, shift: boolean): void {
@@ -2619,6 +3010,26 @@ export class App {
     this.changeDetector.markForCheck();
   }
 
+  private setMapSelectPreview(pointer: { x: number; y: number } | null, shift: boolean): void {
+    const hover = shift && pointer ? pointer : null;
+    if (this.sameCell(this.mapSelectPointer, pointer) && this.sameCell(this.mapSelectHover, hover)) {
+      return;
+    }
+    this.mapSelectPointer = pointer;
+    this.mapSelectHover = hover;
+    this.changeDetector.markForCheck();
+  }
+
+  private setMapDeployPreview(pointer: { x: number; y: number } | null, shift: boolean): void {
+    const hover = shift && pointer ? pointer : null;
+    if (this.sameCell(this.mapDeployPointer, pointer) && this.sameCell(this.mapDeployHover, hover)) {
+      return;
+    }
+    this.mapDeployPointer = pointer;
+    this.mapDeployHover = hover;
+    this.changeDetector.markForCheck();
+  }
+
   private sameCell(left: { x: number; y: number } | null, right: { x: number; y: number } | null): boolean {
     return left?.x === right?.x && left?.y === right?.y;
   }
@@ -2627,6 +3038,18 @@ export class App {
     this.deployAreaAnchor = null;
     this.deployAreaHover = null;
     this.deployPointer = null;
+  }
+
+  private clearMapDeployAreaMark(): void {
+    this.mapDeployAnchor = null;
+    this.mapDeployHover = null;
+    this.mapDeployPointer = null;
+  }
+
+  private clearMapSelectMark(): void {
+    this.mapSelectAnchor = null;
+    this.mapSelectHover = null;
+    this.mapSelectPointer = null;
   }
 
   private placeDeployGroup(start: { x: number; y: number }, end: { x: number; y: number }): void {
@@ -2976,6 +3399,9 @@ export class App {
     if (!role || !this.fortressZoneHasInterior(role.zone)) {
       return null;
     }
+    if (role.role === 'wall') {
+      return 'Drop rejected: a federation cannot be placed on a fortress wall.';
+    }
     const occupant = this.ownByCoord.get(this.coordKey(x, y));
     const others = this.fortressHolders(role.zone).filter((holder) => !(holder.kind === 'own' && holder.id === unitId));
     if (others.length === 0) {
@@ -3000,7 +3426,7 @@ export class App {
   private fortressHolders(zone: string): Array<{ id: number; kind: 'own' | 'enemy' }> {
     const holders: Array<{ id: number; kind: 'own' | 'enemy' }> = [];
     this.fortressRoles().forEach((role, key) => {
-      if (role.zone !== zone) {
+      if (role.zone !== zone || role.role !== 'interior') {
         return;
       }
       const own = this.ownByCoord.get(key);
@@ -3304,6 +3730,9 @@ export class App {
     this.enemyByCoord = new Map<string, FederationUnit>();
     this.highlightedFederationId = null;
     this.highlightedFederationKind = 'own';
+    this.selectedMapFederations = [];
+    this.clearMapDeployAreaMark();
+    this.clearMapSelectMark();
     this.chipIndexKey = '';
     this.chipsByCell.clear();
     this.chipDisplayMode = 'fedType';

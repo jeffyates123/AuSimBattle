@@ -13,6 +13,15 @@ interface LoginRequest {
   consent: boolean;
 }
 
+/** Set to false when the login server should be required again. */
+export const signInDisabled = true;
+
+const localUser: SessionUser = {
+  username: 'local',
+  isAdmin: true,
+  displayName: 'Local',
+};
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly currentUserState = signal<SessionUser | null>(null);
@@ -21,6 +30,11 @@ export class AuthService {
   readonly currentUser = this.currentUserState.asReadonly();
 
   async ensureSession(): Promise<SessionUser | null> {
+    if (signInDisabled) {
+      this.currentUserState.set(localUser);
+      this.loaded = true;
+      return localUser;
+    }
     if (this.loaded) {
       return this.currentUserState();
     }
@@ -30,7 +44,13 @@ export class AuthService {
       this.currentUserState.set(null);
       return null;
     }
-    const body = (await response.json()) as SessionUser;
+    let body: SessionUser;
+    try {
+      body = (await response.json()) as SessionUser;
+    } catch {
+      this.currentUserState.set(null);
+      return null;
+    }
     this.currentUserState.set(body);
     return body;
   }
@@ -47,13 +67,23 @@ export class AuthService {
     if (!response.ok) {
       return { ok: false, error: await this.readError(response, 'Login failed.') };
     }
-    const body = (await response.json()) as SessionUser;
+    let body: SessionUser;
+    try {
+      body = (await response.json()) as SessionUser;
+    } catch {
+      return { ok: false, error: 'Login failed.' };
+    }
     this.currentUserState.set(body);
     this.loaded = true;
     return { ok: true };
   }
 
   async logout(): Promise<void> {
+    if (signInDisabled) {
+      this.currentUserState.set(localUser);
+      this.loaded = true;
+      return;
+    }
     await this.safeRequest('/api/logout', { method: 'POST' });
     this.currentUserState.set(null);
     this.loaded = true;
